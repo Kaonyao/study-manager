@@ -272,6 +272,29 @@ async function loadCloudData() {
     if (doc.exists) {
       const data = doc.data();
       console.log("[Firestore] Loaded cloud data:", data);
+
+      // 【強力な安全装置】
+      // クラウドのデータが空（ドリルが0件）であり、かつローカルに既に学習データがある場合、
+      // クラウドの空データでローカルを破壊するのを防ぐため、ローカルからクラウドへの移行確認を行います。
+      try {
+        const hasLocalDrills = storage.getItem(getUserKey('drills'));
+        const localDrillsCount = (hasLocalDrills && hasLocalDrills !== '[]') ? (JSON.parse(hasLocalDrills) || []).length : 0;
+        const cloudDrillsCount = data.drills ? data.drills.length : 0;
+
+        if (cloudDrillsCount === 0 && localDrillsCount > 0) {
+          const confirmMigration = confirm(
+            "オンライン上に学習データが見つかりませんでしたが、この端末にこれまでのデータが残っています。\n\n端末のデータをオンラインにアップロード（引き継ぎ）して復元しますか？\n（『キャンセル』を選ぶと、オンラインの空データが優先されます）"
+          );
+          if (confirmMigration) {
+            loadData(); // ローカルからロード
+            await saveAllDataToCloud(); // クラウドへ保存
+            saveLocalBackup();
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("[Auth Guard Error]", err);
+      }
       
       // メモリ変数への反映
       if (data.tasks) tasks = data.tasks;
@@ -336,6 +359,15 @@ async function checkAndMigrateLocalData() {
 // ローカルへのバックアップキャッシュ保存
 function saveLocalBackup() {
   try {
+    // 【強力な安全装置】
+    // メモリ上のデータが完全に空（ドリルが0件）であり、かつローカルストレージに既にドリルデータが保存されている場合、
+    // クラウドからの空データ同期による上書き破壊を防ぐため、書き込みを中止してデータを徹底保護します。
+    const hasLocalDrills = storage.getItem(getUserKey('drills'));
+    if ((!drills || drills.length === 0) && hasLocalDrills && hasLocalDrills !== '[]') {
+      console.warn("[Local Backup] 空のデータによる上書きからローカルデータを保護しました。");
+      return;
+    }
+
     storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
     storage.setItem('study_rpg_current_user', gameState.currentUser);
     storage.setItem(getUserKey('profile'), JSON.stringify(gameState.userProfile));
