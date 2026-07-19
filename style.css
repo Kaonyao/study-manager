@@ -1468,6 +1468,7 @@ html, body {
     padding-right: 4px;
     grid-area: data;
     margin-top: 30px; /* 誤操作防止のためフォームから十分な余白をとる */
+    margin-bottom: 80px; /* スクロールしきれるように最下部に広い余白を設ける */
     height: auto;
     border-top: 2px dashed var(--color-border);
     padding-top: 20px;
