@@ -670,7 +670,7 @@ html, body {
 }
 
 .btn-add-drill:hover, .btn-add-schedule:hover {
-  background-color: var(--color-secondary-hover);
+  background-color: #228be6; /* 未定義だった変数を具体的な濃い青に変更 */
 }
 
 /* 登録済みリスト */
@@ -1431,7 +1431,7 @@ html, body {
     grid-template-rows: max-content auto; /* 1行目はコンテンツの最大高さに合わせて潰れを防ぐ */
     grid-template-areas:
       "drills schedule"
-      "data data"; /* データ管理は最下部に横いっぱいに配置 */
+      "drills data"; /* 左側をドリル(縦結合)、右側の上を時間割、下をデータ管理に配置 */
     gap: 20px;
     height: auto;
     min-height: max-content; /* 親の中で高さを制限されて潰れるのを絶対に防ぐ */
@@ -1463,14 +1463,14 @@ html, body {
     grid-area: schedule;
   }
 
-  /* アカウントデータ管理は最下部でドリル・時間割から距離を置く */
+  /* アカウントデータ管理は時間割設定の下の空きスペースに配置 */
   #sub-tab-data {
     display: flex !important;
     flex-direction: column;
     padding-right: 4px;
     grid-area: data;
-    margin-top: 30px; /* 誤操作防止のためフォームから十分な余白をとる */
-    margin-bottom: 80px; /* スクロールしきれるように最下部に広い余白を設ける */
+    margin-top: 30px; /* 時間割フォームから十分な余白をとる */
+    margin-bottom: 20px; /* 最下部の余白 */
     height: auto;
     border-top: 2px dashed var(--color-border);
     padding-top: 20px;
