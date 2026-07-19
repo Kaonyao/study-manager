@@ -1384,10 +1384,14 @@ html, body {
     padding-right: 4px;
   }
 
-  /* ⚙️ 設定タブの2カラム化 */
+  /* ⚙️ 設定タブの2カラム化 & 誤操作防止レイアウト */
   #settings-tab.tab-content.active {
     display: grid !important; /* アクティブな時のみ表示・グリッド化 */
-    grid-template-columns: 1fr 1.1fr;
+    grid-template-columns: 1fr 1fr; /* ドリルと時間割を等幅に */
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "drills schedule"
+      "data data"; /* データ管理は最下部に横いっぱいに配置 */
     gap: 20px;
     height: 100%;
     width: 100%;
@@ -1404,8 +1408,7 @@ html, body {
     height: 100%;
     overflow-y: auto;
     padding-right: 4px;
-    grid-column: 1;
-    grid-row: 1 / span 2;
+    grid-area: drills;
   }
 
   #sub-tab-schedule {
@@ -1414,19 +1417,19 @@ html, body {
     height: 100%;
     overflow-y: auto;
     padding-right: 4px;
-    grid-column: 2;
-    grid-row: 1;
+    grid-area: schedule;
   }
 
-  /* 設定のデータ管理(sub-tab-data)を時間割(sub-tab-schedule)の下に配置 */
+  /* アカウントデータ管理は最下部でドリル・時間割から距離を置く */
   #sub-tab-data {
     display: flex !important;
     flex-direction: column;
     padding-right: 4px;
-    grid-column: 2;
-    grid-row: 2;
-    margin-top: 10px;
+    grid-area: data;
+    margin-top: 30px; /* 誤操作防止のためフォームから十分な余白をとる */
     height: auto;
+    border-top: 2px dashed var(--color-border);
+    padding-top: 20px;
   }
 
   /* 大画面でのみ表示する見出しヘッダーのスタイル */
