@@ -1304,7 +1304,8 @@ html, body {
   /* --- 各タブのレスポンシブ配置 --- */
 
   /* 🏠 ホーム（Adventure）タブの2カラム化 */
-  #adventure-tab.tab-content {
+  #adventure-tab.tab-content.active {
+    display: block;
     height: 100%;
     overflow: hidden;
   }
@@ -1354,8 +1355,8 @@ html, body {
   }
 
   /* 📊 記録タブの3カラムダッシュボード化 */
-  #record-tab.tab-content {
-    display: grid !important; /* サブタブ切替ではなく、PCでは全表示 */
+  #record-tab.tab-content.active {
+    display: grid !important; /* アクティブな時のみ表示・グリッド化 */
     grid-template-columns: 1.1fr 1fr 1.1fr;
     gap: 20px;
     height: 100%;
@@ -1379,8 +1380,8 @@ html, body {
   }
 
   /* ⚙️ 設定タブの2カラム化 */
-  #settings-tab.tab-content {
-    display: grid !important;
+  #settings-tab.tab-content.active {
+    display: grid !important; /* アクティブな時のみ表示・グリッド化 */
     grid-template-columns: 1fr 1.1fr;
     gap: 20px;
     height: 100%;
