@@ -1343,6 +1343,7 @@ html, body {
     background-color: #f8f9fa;
     height: 100%;
     overflow-y: auto; /* 右画面全体でのスクロールを可能にする */
+    display: block !important; /* 親のFlexbox特性を無効化し、子要素の高さが潰れるのを防ぐ */
   }
 
   /* --- 各タブのレスポンシブ配置 --- */
@@ -1433,6 +1434,7 @@ html, body {
       "data data"; /* データ管理は最下部に横いっぱいに配置 */
     gap: 20px;
     height: auto;
+    min-height: max-content; /* 親の中で高さを制限されて潰れるのを絶対に防ぐ */
     width: 100%;
     overflow: visible;
   }
