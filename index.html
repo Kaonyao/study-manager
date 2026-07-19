@@ -581,7 +581,7 @@
       <form class="add-user-form" id="user-form" style="text-align: left;">
         <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">➕ 新規ユーザー作成</h4>
         <div style="display: flex; gap: 8px; width: 100%;">
-          <input type="text" id="new-user-name-input" placeholder="名前..." required maxlength="10" style="flex-grow: 1; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          <input type="text" id="new-user-name-input" placeholder="名前..." required maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex-grow: 1; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
           <button type="submit" class="btn btn-add-user" style="white-space: nowrap; background: var(--color-primary); color: white; padding: 10px 16px;">作成</button>
         </div>
       </form>
@@ -599,7 +599,7 @@
       <form id="profile-form" style="margin-top: 12px; text-align: left;">
         <div class="form-group" style="margin-bottom: 16px;">
           <label class="form-label" for="profile-name-input">名前</label>
-          <input type="text" id="profile-name-input" placeholder="名前..." required maxlength="10" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-weight: 700; background-color: var(--color-bg-app);">
+          <input type="text" id="profile-name-input" placeholder="名前..." required maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-weight: 700; background-color: var(--color-bg-app);">
         </div>
         
         <div class="profile-modal-actions" style="display: flex; gap: 8px;">
