@@ -1339,10 +1339,10 @@ html, body {
   /* メインコンテンツエリア */
   .app-main {
     grid-area: main;
-    padding: 20px;
+    padding: 24px;
     background-color: #f8f9fa;
     height: 100%;
-    overflow: hidden;
+    overflow-y: auto; /* 右画面全体でのスクロールを可能にする */
   }
 
   /* --- 各タブのレスポンシブ配置 --- */
@@ -1350,8 +1350,8 @@ html, body {
   /* 🏠 ホーム（Adventure）タブの2カラム化 */
   #adventure-tab.tab-content.active {
     display: block;
-    height: 100%;
-    overflow: hidden;
+    height: auto;
+    overflow: visible;
   }
 
   #adventure-tab .task-section {
@@ -1363,7 +1363,7 @@ html, body {
       "sidebar mainlist"
       "addform mainlist";
     gap: 16px;
-    height: 100%;
+    height: auto;
   }
 
   #adventure-tab .section-header {
@@ -1389,8 +1389,8 @@ html, body {
 
   #adventure-tab .task-list-wrapper {
     grid-area: mainlist;
-    height: 100%;
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
   }
 
   #adventure-tab .add-task-form {
@@ -1403,9 +1403,9 @@ html, body {
     display: grid !important; /* アクティブな時のみ表示・グリッド化 */
     grid-template-columns: 1.1fr 1fr 1.1fr;
     gap: 20px;
-    height: 100%;
+    height: auto;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
 
   /* きろくの子タブメニューを非表示 */
@@ -1418,8 +1418,8 @@ html, body {
   #sub-tab-records-calendar {
     display: flex !important; /* 常にすべて表示 */
     flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
     padding-right: 4px;
   }
 
@@ -1427,14 +1427,14 @@ html, body {
   #settings-tab.tab-content.active {
     display: grid !important; /* アクティブな時のみ表示・グリッド化 */
     grid-template-columns: 1fr 1fr; /* ドリルと時間割を等幅に */
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto auto; /* 高さを自然に広げる */
     grid-template-areas:
       "drills schedule"
       "data data"; /* データ管理は最下部に横いっぱいに配置 */
     gap: 20px;
-    height: 100%;
+    height: auto;
     width: 100%;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .settings-sub-tabs {
@@ -1444,8 +1444,8 @@ html, body {
   #sub-tab-drills {
     display: flex !important; /* 常にすべて表示 */
     flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
     padding-right: 4px;
     grid-area: drills;
   }
@@ -1453,8 +1453,8 @@ html, body {
   #sub-tab-schedule {
     display: flex !important; /* 常にすべて表示 */
     flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
     padding-right: 4px;
     grid-area: schedule;
   }
