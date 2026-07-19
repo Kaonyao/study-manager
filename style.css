@@ -1427,7 +1427,7 @@ html, body {
   #settings-tab.tab-content.active {
     display: grid !important; /* アクティブな時のみ表示・グリッド化 */
     grid-template-columns: 1fr 1fr; /* ドリルと時間割を等幅に */
-    grid-template-rows: auto auto; /* 高さを自然に広げる */
+    grid-template-rows: max-content auto; /* 1行目はコンテンツの最大高さに合わせて潰れを防ぐ */
     grid-template-areas:
       "drills schedule"
       "data data"; /* データ管理は最下部に横いっぱいに配置 */
@@ -1445,6 +1445,7 @@ html, body {
     display: flex !important; /* 常にすべて表示 */
     flex-direction: column;
     height: auto;
+    min-height: max-content !important; /* コンテンツに応じた最小高さを強制し重なりを防ぐ */
     overflow: visible;
     padding-right: 4px;
     grid-area: drills;
@@ -1454,6 +1455,7 @@ html, body {
     display: flex !important; /* 常にすべて表示 */
     flex-direction: column;
     height: auto;
+    min-height: max-content !important; /* コンテンツに応じた最小高さを強制し重なりを防ぐ */
     overflow: visible;
     padding-right: 4px;
     grid-area: schedule;
