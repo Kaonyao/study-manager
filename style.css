@@ -1424,14 +1424,11 @@ html, body {
     padding-right: 4px;
   }
 
-  /* ⚙️ 設定タブの2カラム化 & 誤操作防止レイアウト */
+  /* ⚙️ 設定タブの3カラム化 */
   #settings-tab.tab-content.active {
     display: grid !important; /* アクティブな時のみ表示・グリッド化 */
-    grid-template-columns: 1fr 1fr; /* ドリルと時間割を等幅に */
-    grid-template-rows: max-content auto; /* 1行目はコンテンツの最大高さに合わせて潰れを防ぐ */
-    grid-template-areas:
-      "drills schedule"
-      "drills data"; /* 左側をドリル(縦結合)、右側の上を時間割、下をデータ管理に配置 */
+    grid-template-columns: 1fr 1fr 1fr; /* きろくタブと同じ3列等幅に */
+    grid-template-rows: auto; /* 縦方向は1行のみ */
     gap: 20px;
     height: auto;
     min-height: max-content; /* 親の中で高さを制限されて潰れるのを絶対に防ぐ */
@@ -1450,7 +1447,8 @@ html, body {
     min-height: max-content !important; /* コンテンツに応じた最小高さを強制し重なりを防ぐ */
     overflow: visible;
     padding-right: 4px;
-    grid-area: drills;
+    grid-column: 1;
+    grid-row: 1;
   }
 
   #sub-tab-schedule {
@@ -1460,20 +1458,22 @@ html, body {
     min-height: max-content !important; /* コンテンツに応じた最小高さを強制し重なりを防ぐ */
     overflow: visible;
     padding-right: 4px;
-    grid-area: schedule;
+    grid-column: 2;
+    grid-row: 1;
   }
 
-  /* アカウントデータ管理は時間割設定の下の空きスペースに配置 */
+  /* アカウントデータ管理は3列目（右端）に配置 */
   #sub-tab-data {
     display: flex !important;
     flex-direction: column;
     padding-right: 4px;
-    grid-area: data;
-    margin-top: 30px; /* 時間割フォームから十分な余白をとる */
+    grid-column: 3;
+    grid-row: 1;
+    margin-top: 0;
     margin-bottom: 20px; /* 最下部の余白 */
     height: auto;
-    border-top: 2px dashed var(--color-border);
-    padding-top: 20px;
+    border-top: none; /* 横並びのため区切り線は不要 */
+    padding-top: 0;
   }
 
   /* 大画面でのみ表示する見出しヘッダーのスタイル */
