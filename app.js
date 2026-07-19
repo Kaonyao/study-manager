@@ -162,6 +162,7 @@ function startLocalMode() {
     renderTasks();
     renderNigateBuster();
     updateUI();
+    renderNewTaskDrillOptions();
   } catch (err) {
     console.error("Local Initialization warning:", err);
   }
@@ -204,6 +205,7 @@ function setupAuthObserver() {
         renderNigateBuster();
         updateUI();
         if (typeof renderCalendar === 'function') renderCalendar();
+        renderNewTaskDrillOptions();
       } catch (e) {
         console.error("App render failed after cloud load:", e);
       }
@@ -3067,6 +3069,7 @@ async function deleteDrill(drillId) {
     renderRegisteredSchedulesList();
     renderTasks();
     renderScheduleDrillOptions();
+    renderNewTaskDrillOptions();
     showGameToast("ドリルを削除しました。🗑️", "🎒");
   }
 }
@@ -3921,6 +3924,7 @@ function handleSaveProfile(event) {
   generateDailyTasks();
   renderTasks();
   updateUI();
+  renderNewTaskDrillOptions();
   
   closeProfileModal();
   showGameToast("ユーザー情報を更新しました。", "👤");
