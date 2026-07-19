@@ -1219,9 +1219,48 @@ html, body {
 }
 
 /* ==========================================================================
-   13. タブレット・PC大画面用レスポンシブデザイン (min-width: 768px)
+   13. タブレット縦向き・中型画面用レスポンシブデザイン (768px〜1024px)
    ========================================================================== */
-@media (min-width: 768px) {
+@media (min-width: 768px) and (max-width: 1024px) {
+  html, body {
+    background-color: var(--color-bg-outer);
+    padding: 0;
+  }
+
+  .phone-container {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-main {
+    flex-grow: 1;
+    padding: 24px;
+    background-color: #f8f9fa;
+  }
+
+  /* 縦長画面では1カラムなので、各登録フォームも横幅いっぱいにゆったり表示 */
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .btn {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ==========================================================================
+   14. PC・タブレット横向き用レスポンシブデザイン (min-width: 1025px)
+   ========================================================================== */
+@media (min-width: 1025px) {
   html, body {
     background-color: var(--color-bg-outer);
     padding: 0;
