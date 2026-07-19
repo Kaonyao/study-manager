@@ -3443,17 +3443,35 @@ function renderModalUserList() {
     li.style.width = '100%';
     const isActive = user === gameState.currentUser ? 'active' : '';
 
+    // 現在のアクティブユーザー、およびユーザー数が1人の場合は削除できないようにする
+    const showDelete = (user !== gameState.currentUser && gameState.users.length > 1);
+    const deleteBtnHtml = showDelete ? `
+      <button type="button" class="btn-delete-user" data-user="${escapeHTML(user)}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 0 4px; display:flex; align-items:center;" title="削除">🗑️</button>
+    ` : '';
+
     li.innerHTML = `
-      <button type="button" class="btn btn-select-user ${isActive}" style="width: 100%; text-align: left; padding: 10px; border: 1px solid var(--color-border); background-color: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-radius:var(--radius-sm);">
-        <span class="user-btn-name">👤 ${escapeHTML(user)}</span>
-        ${user === gameState.currentUser ? '<span class="user-current-tag" style="font-size:0.7rem; color:var(--color-secondary); font-weight:700;">使用中</span>' : ''}
-      </button>
+      <div style="display: flex; gap: 8px; width: 100%; align-items: center;">
+        <button type="button" class="btn btn-select-user ${isActive}" style="flex-grow: 1; text-align: left; padding: 10px; border: 1px solid var(--color-border); background-color: #f8f9fa; cursor: pointer; display: flex; justify-content: space-between; border-radius:var(--radius-sm);">
+          <span class="user-btn-name">👤 ${escapeHTML(user)}</span>
+          ${user === gameState.currentUser ? '<span class="user-current-tag" style="font-size:0.7rem; color:var(--color-secondary); font-weight:700;">使用中</span>' : ''}
+        </button>
+        ${deleteBtnHtml}
+      </div>
     `;
 
     li.querySelector('.btn-select-user').addEventListener('click', () => {
       switchUser(user);
       closeUserModal();
     });
+
+    if (showDelete) {
+      li.querySelector('.btn-delete-user').addEventListener('click', async (e) => {
+        e.stopPropagation(); // 切り替えボタンへのクリック伝播を防ぐ
+        if (await showGameConfirm(`ユーザー「${user}」と、その学習データを本当に削除しますか？\n（この操作はもとに戻せません）`)) {
+          deleteUser(user);
+        }
+      });
+    }
 
     modalUserListEl.appendChild(li);
   });
@@ -3498,6 +3516,38 @@ function handleAddUser(event) {
     switchUser(newName);
     closeUserModal();
   }
+}
+
+// ユーザー削除処理とローカルストレージ掃除
+async function deleteUser(userName) {
+  if (userName === gameState.currentUser) {
+    showGameToast("使用中のユーザーは削除できません。", "⚠️");
+    return;
+  }
+
+  // 1. ユーザーリストから除外
+  gameState.users = gameState.users.filter(u => u !== userName);
+  storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
+
+  // 2. ローカルストレージに残っているそのユーザーの学習データを消去
+  const keysToRemove = [
+    'drills', 'tasks', 'history', 'completed_tasks', 'weekly_schedule', 'profile', 'mistake_records', 'all_completed_dates'
+  ];
+  keysToRemove.forEach(baseKey => {
+    try {
+      localStorage.removeItem(`study_rpg_u_${userName}_${baseKey}`);
+    } catch (e) {
+      console.error("[Delete User Backup Fail]", e);
+    }
+  });
+
+  // 3. オンライン同期（Firestore上の gameState.users なども最新化して上書き）
+  if (firebaseEnabled && currentFirebaseUser) {
+    await saveAllDataToCloud();
+  }
+
+  showGameToast(`ユーザー「${userName}」を削除しました。🗑️`, "👤");
+  renderModalUserList();
 }
 
 // タスク繰り越し（延期）モーダルの制御
