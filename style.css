@@ -481,6 +481,12 @@ html, body {
 }
 
 /* 新規タスク追加フォーム */
+.add-task-form {
+  position: relative;
+  z-index: 15; /* 下部タブバー(z-index: 10)より手前に配置し、確実にタップ可能にする */
+  padding-bottom: 8px; /* 下部タブバーとの間に適度な余白を作る */
+}
+
 .add-task-form input[type="text"] {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -1230,8 +1236,8 @@ html, body {
   .phone-container {
     max-width: 100%;
     width: 100%;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -1269,8 +1275,8 @@ html, body {
   .phone-container {
     max-width: 100%;
     width: 100%;
-    height: 100vh;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
     border: none;
     box-shadow: none;
