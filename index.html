@@ -117,6 +117,7 @@
 
         <!-- 1. じっせきコンテナ -->
         <div id="sub-tab-records-summary" class="records-sub-content" style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header summary-header">🏆 がんばり実績</div>
           <!-- 累計実績カード -->
           <div class="record-dashboard" style="display: flex; gap: 12px; margin-bottom: 8px;">
             <div class="cleared-tasks-card" style="flex: 1; text-align: center; padding: 12px; background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);">
@@ -163,6 +164,7 @@
 
         <!-- 3. にがてコンテナ (RPGクイズ要素を廃止し、アルバムとメモ機能に再整理) -->
         <div id="sub-tab-records-nigate" class="records-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header nigate-header">👾 にがてアルバム</div>
           <section class="nigate-report-section" style="margin-top: 6px;">
             <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">苦手分析＆アルバム</h2>
             
@@ -198,6 +200,7 @@
 
         <!-- 4. カレンダーコンテナ -->
         <div id="sub-tab-records-calendar" class="records-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header calendar-header-badge">📅 カレンダーと達成タスク</div>
           <div class="calendar-container">
             <div class="calendar-header">
               <button type="button" id="btn-prev-month" class="btn btn-calendar-nav">◀</button>
@@ -242,6 +245,7 @@
 
         <!-- 1. ドリル・宿題設定コンテナ -->
         <div id="sub-tab-drills" class="settings-sub-content" style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header settings-drills-header">✏️ 教材・ドリルの登録</div>
           <!-- ドリル設定セクション -->
           <section class="settings-tab-section">
             <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">ドリル・練習の登録</h2>
@@ -370,6 +374,7 @@
         
         <!-- 2. 時間割設定コンテナ -->
         <div id="sub-tab-schedule" class="settings-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header settings-schedule-header">📅 1週間の時間割設定</div>
           <!-- 時間割設定セクション -->
           <section class="settings-tab-section">
             <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">1週間の時間割設定</h2>
@@ -467,6 +472,7 @@
         
         <!-- 3. データ管理コンテナ -->
         <div id="sub-tab-data" class="settings-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <div class="desktop-only-header settings-data-header">⚙️ アカウント・データ管理</div>
           <!-- クラウド同期セクション -->
           <section class="settings-tab-section" id="cloud-status-section" style="display: none;">
             <h2 class="section-title" style="font-size: 1.05rem; color: var(--color-secondary); text-align: center;">☁️ クラウド同期</h2>
@@ -703,6 +709,17 @@
 
   <!-- Firebase 設定の読み込み -->
   <script src="firebase-config.js"></script>
+
+  <!-- サービスワーカーの登録スクリプト -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('[PWA] ServiceWorker registered:', reg.scope))
+          .catch(err => console.error('[PWA] ServiceWorker registration failed:', err));
+      });
+    }
+  </script>
 
   <!-- JSの読み込み -->
   <script src="app.js"></script>

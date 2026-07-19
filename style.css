@@ -1213,6 +1213,11 @@ html, body {
   color: var(--color-secondary-hover) !important;
 }
 
+/* スマホ表示では大画面用ヘッダーは非表示 */
+.desktop-only-header {
+  display: none !important;
+}
+
 /* ==========================================================================
    13. タブレット・PC大画面用レスポンシブデザイン (min-width: 768px)
    ========================================================================== */
@@ -1422,5 +1427,56 @@ html, body {
     grid-row: 2;
     margin-top: 10px;
     height: auto;
+  }
+
+  /* 大画面でのみ表示する見出しヘッダーのスタイル */
+  .desktop-only-header {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 900;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    box-shadow: var(--shadow-soft);
+    background-color: #ffffff;
+    border: 1px solid var(--color-border);
+  }
+
+  .desktop-only-header.summary-header {
+    border-left: 5px solid var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+  }
+
+  .desktop-only-header.nigate-header {
+    border-left: 5px solid #8e78f9;
+    color: #745beb;
+    background-color: #f3f0ff;
+  }
+
+  .desktop-only-header.calendar-header-badge {
+    border-left: 5px solid var(--color-secondary);
+    color: var(--color-secondary);
+    background-color: var(--color-secondary-light);
+  }
+
+  .desktop-only-header.settings-drills-header {
+    border-left: 5px solid var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+  }
+
+  .desktop-only-header.settings-schedule-header {
+    border-left: 5px solid var(--color-secondary);
+    color: var(--color-secondary);
+    background-color: var(--color-secondary-light);
+  }
+
+  .desktop-only-header.settings-data-header {
+    border-left: 5px solid var(--color-danger);
+    color: var(--color-danger);
+    background-color: #fff5f5;
   }
 }
