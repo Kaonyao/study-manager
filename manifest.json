@@ -1,0 +1,18 @@
+{
+  "short_name": "スタディマネージャー",
+  "name": "シンプル学習管理ボード - スタディマネージャー",
+  "description": "シンプルで視認性の高い学習管理ツール。今日のタスク整理、時間割・ドリル管理、過去の間違い記録ができます。",
+  "icons": [
+    {
+      "src": "app_icon.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#ffffff",
+  "theme_color": "#339af0",
+  "display": "standalone",
+  "orientation": "portrait"
+}

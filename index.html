@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>学習管理ツール - スタディマネージャー</title>
+  <meta name="description" content="シンプルで視認性の高い学習管理ツール。今日のタスク整理、時間割・ドリル管理、過去の間違い記録ができます。">
+  
+  <!-- PWA 対応のメタタグ -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4a90e2">
+  
+  <!-- iOS用 PWA 設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="スタディマネージャー">
+  <link rel="apple-touch-icon" href="app_icon.png">
+  
+  <!-- Google Fonts: 視認性の高い標準的なサンセリフフォント -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- CSSの読み込み -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 画面中央のメインコンテナ -->
+  <div class="phone-container">
+    
+    <!-- 1. ヘッダー：ユーザー情報、日付、タスク進捗率 -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="user-info">
+          <span class="user-badge">👤 <span id="current-user-name">ユーザー</span></span>
+          <button type="button" id="btn-user-switch" class="btn-user-switch" title="ユーザーを切り替える">🔁 切り替え</button>
+          <button type="button" id="btn-user-edit" class="btn-user-switch btn-edit-profile" title="プロフィールを編集する">✏️ 編集</button>
+        </div>
+        <div class="date-info">
+          <span id="today-date">2026年7月16日</span>
+        </div>
+      </div>
+      <div class="header-progress">
+        <div class="progress-bar-label">今日の進捗率: <span id="today-progress-text">0% (0/0)</span></div>
+        <div class="progress-bar-container">
+          <div id="today-progress-bar" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- メインコンテンツエリア -->
+    <main class="app-main">
+      
+      <!-- ==================== 🏠 ホーム タブ ==================== -->
+      <div class="tab-content active" id="adventure-tab">
+        
+        <!-- タスク管理エリア（チャット削除分、タスクリストを最大化） -->
+        <section class="task-section">
+          <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <h2 class="section-title" style="margin-bottom: 0; font-size: 1.05rem; font-weight: 700; color: var(--color-text);">今日のすること</h2>
+            <button type="button" id="btn-toggle-simulation" class="btn-icon-text" style="font-size: 0.75rem; padding: 6px 12px; font-weight: 700;">🌅 明日の予定</button>
+          </div>
+          
+          <!-- カテゴリ切り替えタブ -->
+          <div class="task-category-tabs" id="task-category-tabs">
+            <button type="button" class="category-tab-btn active" data-category="all">すべて</button>
+            <button type="button" class="category-tab-btn" data-category="しゅくだい">📝宿題</button>
+            <button type="button" class="category-tab-btn" data-category="べんきょう">📚勉強</button>
+            <button type="button" class="category-tab-btn" data-category="れんしゅう">🎹練習</button>
+            <button type="button" class="category-tab-btn" data-category="ならいごと">🏆予定</button>
+            <button type="button" class="category-tab-btn" data-category="おてつだい">🏠手伝い</button>
+          </div>
+          
+          <!-- タスクリスト -->
+          <div class="task-list-wrapper">
+            <ul class="task-list" id="task-list">
+              <!-- JSで動的に生成されます -->
+            </ul>
+          </div>
+
+          <!-- タスク追加フォーム (単発タスク用) -->
+          <form class="add-task-form" id="add-task-form" style="display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+            <!-- 1行目：ドリル・予定選択プルダウン -->
+            <div style="width: 100%;">
+              <select id="new-task-drill-select" style="width: 100%; padding: 6px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.75rem; font-weight: 700; background-color: var(--color-bg-app); outline: none;">
+                <option value="custom" selected>✏️ 自分で決める (カスタム)</option>
+              </select>
+            </div>
+            <!-- 2行目：[カテゴリ] [入力欄] [追加] (メモ欄を逆算してスリム化) -->
+            <div style="display: flex; gap: 4px; width: 100%; align-items: center;">
+              <select id="new-task-category" style="padding: 6px 4px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.75rem; font-weight: 700; background-color: var(--color-bg-app); outline: none; width: 90px; flex-shrink: 0;">
+                <option value="べんきょう">📚勉強</option>
+                <option value="ならいごと">🏆予定</option>
+                <option value="しゅくだい">📝宿題</option>
+                <option value="れんしゅう">🎹練習</option>
+                <option value="おてつだい" selected>🏠手伝い</option>
+              </select>
+              <input type="text" id="new-task-input" placeholder="今日のタスクを追加..." required maxlength="30" style="flex-grow: 1; padding: 6px 8px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.75rem; outline: none; background-color: var(--color-bg-app); min-width: 0;">
+              <button type="submit" class="btn btn-add" id="btn-add-task" style="white-space: nowrap; padding: 6px 10px; font-size: 0.75rem; flex-shrink: 0; height: 31px;">➕追加</button>
+            </div>
+          </form>
+        </section>
+
+      </div>
+
+      <!-- ==================== 📊 きろく タブ ==================== -->
+      <div class="tab-content" id="record-tab" style="display: none;">
+        
+        <!-- きろく内子タブメニュー -->
+        <div class="records-sub-tabs" style="display: flex; gap: 4px; margin-bottom: 16px; width: 100%;">
+          <button type="button" class="sub-tab-btn records-sub-tab-btn active" data-subtab="records-summary" style="flex: 1;">🏆 実績</button>
+          <button type="button" class="sub-tab-btn records-sub-tab-btn" data-subtab="records-nigate" style="flex: 1;">👾 苦手</button>
+          <button type="button" class="sub-tab-btn records-sub-tab-btn" data-subtab="records-calendar" style="flex: 1;">📅 カレンダー</button>
+        </div>
+
+        <!-- 1. じっせきコンテナ -->
+        <div id="sub-tab-records-summary" class="records-sub-content" style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <!-- 累計実績カード -->
+          <div class="record-dashboard" style="display: flex; gap: 12px; margin-bottom: 8px;">
+            <div class="cleared-tasks-card" style="flex: 1; text-align: center; padding: 12px; background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);">
+              <div class="record-label" style="font-size: 0.8rem; font-weight: 500; color: var(--color-text-light);">達成タスク数</div>
+              <div class="record-value" style="font-size: 1.5rem; font-weight: 700; color: var(--color-primary); margin-top: 4px;"><span id="cleared-tasks-count">0</span> 個</div>
+            </div>
+            <div class="study-time-card" style="flex: 1; text-align: center; padding: 12px; background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);">
+              <div class="record-label" style="font-size: 0.8rem; font-weight: 500; color: var(--color-text-light);">学習時間</div>
+              <div class="record-value" style="font-size: 1.5rem; font-weight: 700; color: #1c7ed6; margin-top: 4px;"><span id="study-time-count">0</span> 分</div>
+            </div>
+          </div>
+          
+          <!-- ウィークリーレポート（週次集計） -->
+          <section class="weekly-report-section" style="margin-top: 6px; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h3 class="section-title" id="weekly-report-title" style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--color-primary);">📅 今週の振り返り</h3>
+              <button type="button" id="btn-toggle-weekly-report" class="btn btn-weekly-toggle" style="padding: 4px 10px; font-size: 0.72rem; font-weight: 700; border-radius: var(--radius-sm); border: none; cursor: pointer;">先週の記録 ◀</button>
+            </div>
+            
+            <div class="weekly-summary-bar" style="display: flex; gap: 8px; margin-bottom: 8px; font-size: 0.8rem; font-weight: 700; justify-content: center; font-family: var(--font-family);">
+              <span style="background-color: #fff; border: 1.5px solid var(--color-border); padding: 4px 12px; border-radius: var(--radius-sm);">
+                達成: <span id="weekly-cleared-count" style="color: var(--color-primary); font-size: 0.95rem; font-weight: 700;">0</span> 個
+              </span>
+              <span style="background-color: #fff; border: 1.5px solid var(--color-border); padding: 4px 12px; border-radius: var(--radius-sm);">
+                時間: <span id="weekly-study-time" style="color: #1c7ed6; font-size: 0.95rem; font-weight: 700;">0</span> 分
+              </span>
+            </div>
+            
+            <div class="weekly-tasks-box" style="background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 12px; max-height: 150px; overflow-y: auto;">
+              <ul id="weekly-completed-list" style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; text-align: left;">
+                <!-- JSで動的に追加されます -->
+              </ul>
+            </div>
+          </section>
+          
+          <!-- ドリル進捗 -->
+          <section class="drill-progress-section">
+            <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">ドリルの進捗</h2>
+            <ul class="drill-settings-list" id="record-drill-list" style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 8px;">
+              <!-- JSで動的に追加されます -->
+            </ul>
+          </section>
+        </div>
+
+        <!-- 3. にがてコンテナ (RPGクイズ要素を廃止し、アルバムとメモ機能に再整理) -->
+        <div id="sub-tab-records-nigate" class="records-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <section class="nigate-report-section" style="margin-top: 6px;">
+            <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">苦手分析＆アルバム</h2>
+            
+            <div class="nigate-report-box" style="background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; text-align: left;">
+              <h4 class="nigate-report-subtitle" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">👾 間違いの傾向</h4>
+              <div class="nigate-types-container" id="nigate-types-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                <!-- JSでバッジが並びます -->
+              </div>
+              <div class="nigate-ai-advice-box" id="nigate-ai-advice-box" style="background: #f8f9fa; border: 1.5px solid #ced4da; border-radius: var(--radius-sm); padding: 10px; border-left: 4px solid #8E78F9;">
+                <p class="nigate-ai-advice-text" id="nigate-ai-advice-text" style="font-size: 0.8rem; line-height: 1.4; color: var(--color-text); margin: 0;">
+                  間違えた問題の写真やメモを記録して、復習に役立てよう！
+                </p>
+              </div>
+            </div>
+            
+            <!-- アルバム -->
+            <div class="nigate-album-box" style="background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 16px; text-align: left; margin-bottom: 12px;">
+              <h4 class="nigate-report-subtitle" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">📷 間違い写真アルバム</h4>
+              <div class="nigate-album-grid" id="nigate-album-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-top: 8px;">
+                <!-- JSで写真履歴が並びます -->
+              </div>
+            </div>
+
+            <!-- ドリルごとの苦手メモ一覧 -->
+            <div class="nigate-folders-section" style="background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); padding: 16px; text-align: left;">
+              <h4 class="nigate-report-subtitle" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">📋 ドリル別間違いメモ</h4>
+              <div id="nigate-folders-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
+                <!-- JSで動的に追加されます -->
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 4. カレンダーコンテナ -->
+        <div id="sub-tab-records-calendar" class="records-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <div class="calendar-container">
+            <div class="calendar-header">
+              <button type="button" id="btn-prev-month" class="btn btn-calendar-nav">◀</button>
+              <span id="calendar-month-year">2026年6月</span>
+              <button type="button" id="btn-next-month" class="btn btn-calendar-nav">▶</button>
+            </div>
+            <div class="calendar-weekdays">
+              <div class="sun">日</div>
+              <div>月</div>
+              <div>火</div>
+              <div>水</div>
+              <div>木</div>
+              <div>金</div>
+              <div class="sat">土</div>
+            </div>
+            <div id="calendar-days-grid" class="calendar-days-grid">
+              <!-- JSで動的に日付を生成 -->
+            </div>
+          </div>
+
+          <section class="completed-tasks-section" style="margin-top: 12px; width: 100%;">
+            <h2 class="section-title" id="completed-tasks-title" style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; text-align: left;">達成したタスク</h2>
+            <div class="completed-tasks-box" style="background-color: var(--color-bg-app); border: 1.5px solid var(--color-border); padding: 12px; min-height: 80px; border-radius: var(--radius-sm);">
+              <ul id="calendar-completed-list" style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 8px;">
+                <!-- JSで動的に追加されます -->
+              </ul>
+            </div>
+          </section>
+        </div>
+
+      </div>
+
+      <!-- ==================== ⚙️ せってい タブ ==================== -->
+      <div class="tab-content" id="settings-tab" style="display: none;">
+        
+        <!-- 設定内子タブメニュー -->
+        <div class="settings-sub-tabs" style="display: flex; gap: 4px; margin-bottom: 16px; width: 100%;">
+          <button type="button" class="sub-tab-btn active" data-subtab="drills" style="flex: 1; font-size: 0.7rem; padding: 8px 4px;">ドリル・練習の登録</button>
+          <button type="button" class="sub-tab-btn" data-subtab="schedule" style="flex: 1; font-size: 0.7rem; padding: 8px 4px;">時間割の登録</button>
+          <button type="button" class="sub-tab-btn" data-subtab="data" style="flex: 1; font-size: 0.7rem; padding: 8px 4px;">データ管理</button>
+        </div>
+
+        <!-- 1. ドリル・宿題設定コンテナ -->
+        <div id="sub-tab-drills" class="settings-sub-content" style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+          <!-- ドリル設定セクション -->
+          <section class="settings-tab-section">
+            <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">ドリル・練習の登録</h2>
+            
+            <form class="drill-form" id="drill-form">
+              <!-- 編集用非表示IDフィールド -->
+              <input type="hidden" id="drill-id-input">
+              <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px;">✏️ 新規登録</h4>
+              <div class="form-group">
+                <label class="form-label" for="drill-name-input">ドリル名</label>
+                <input type="text" id="drill-name-input" placeholder="例: 算数ラボ" required maxlength="20">
+              </div>
+
+              <div class="form-group" style="margin-top: 10px;">
+                <label class="form-label">目標の種類</label>
+                <!-- 隠しセレクト（JS互換用） -->
+                <select id="drill-type-select" style="display: none;">
+                  <option value="page" selected>📄 ページで決める</option>
+                  <option value="time">⏱️ 時間で決める</option>
+                </select>
+                <!-- 切り替えボタン -->
+                <div class="goal-type-tabs">
+                  <button type="button" class="goal-type-btn active" data-type="page">📄 ページで決める</button>
+                  <button type="button" class="goal-type-btn" data-type="time">⏱️ 時間で決める</button>
+                </div>
+              </div>
+
+              <!-- ページ目標ラベルと入力エリア -->
+              <div class="drill-input-group-label" id="drill-page-fields-label">
+                <span>📄 ページの設定 (なくてもOK)</span>
+              </div>
+              <div class="form-row-three" id="drill-page-fields-row">
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-total-input">総ページ数</label>
+                  <input type="number" id="drill-total-input" min="1" max="999" placeholder="100" style="width: 100%;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-start-input">開始ページ</label>
+                  <input type="number" id="drill-start-input" min="1" max="999" placeholder="1" style="width: 100%;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-daily-input">1日の分量</label>
+                  <input type="number" id="drill-daily-input" min="1" max="99" placeholder="2" style="width: 100%;">
+                </div>
+              </div>
+
+              <!-- 問題目標ラベルと入力エリア -->
+              <div class="drill-input-group-label" id="drill-question-fields-label">
+                <span>❓ 問題数の設定 (なくてもOK)</span>
+              </div>
+              <div class="form-row-three" id="drill-question-fields-row">
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-question-total-input">総問題数</label>
+                  <input type="number" id="drill-question-total-input" min="1" max="999" placeholder="50" style="width: 100%;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-question-start-input">開始問題</label>
+                  <input type="number" id="drill-question-start-input" min="1" max="999" placeholder="1" style="width: 100%;">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label" for="drill-question-daily-input">1日の分量</label>
+                  <input type="number" id="drill-question-daily-input" min="1" max="99" placeholder="5" style="width: 100%;">
+                </div>
+              </div>
+
+              <div class="form-group" id="drill-time-fields-row" style="display: none; margin-top: 10px;">
+                <label class="form-label" for="drill-duration-input">1回の目標時間（分）</label>
+                <input type="number" id="drill-duration-input" min="1" max="999" placeholder="30" style="width: 100%;">
+              </div>
+                
+              <div class="form-group" style="margin-top: 10px;">
+                <label class="form-label">カテゴリ</label>
+                <!-- 隠しセレクト（JS互換用） -->
+                <select id="drill-category-select" style="display: none;">
+                  <option value="べんきょう" selected>📚 勉強</option>
+                  <option value="しゅくだい">📝 宿題</option>
+                  <option value="れんしゅう">🎹 練習</option>
+                </select>
+                <!-- 切り替えボタン -->
+                <div class="drill-category-tabs">
+                  <button type="button" class="category-choice-btn active" data-category="べんきょう">📚 勉強</button>
+                  <button type="button" class="category-choice-btn" data-category="しゅくだい">📝 宿題</button>
+                  <button type="button" class="category-choice-btn" data-category="れんしゅう">🎹 練習</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 10px;">
+                <label class="form-label" for="drill-timing-select">やるタイミング</label>
+                <select id="drill-timing-select" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-weight: 700; background-color: var(--color-bg-app); outline: none;">
+                  <option value="any" selected>⏰ 指定なし</option>
+                  <option value="before_lesson">🎒 習い事の前</option>
+                  <option value="after_lesson">🎒 習い事の後</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="margin-top: 10px; margin-bottom: 10px;">
+                <label class="form-label" for="drill-desc-input">詳細メモ（任意）</label>
+                <textarea id="drill-desc-input" placeholder="例: ノートに計算をていねいに書く。" maxlength="100" rows="2" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.85rem; outline: none; resize: none;"></textarea>
+              </div>
+              
+              <button type="submit" id="btn-add-drill" class="btn btn-add-drill">✨ 登録する</button>
+            </form>
+            
+            <div class="registered-drills-section" style="margin-top: 20px;">
+              <div class="archive-accordion-header" id="registered-drills-accordion-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px; background-color: #f1f3f5; border: 1.5px solid var(--color-border); font-weight: 700; font-family: var(--font-family); font-size: 0.85rem; user-select: none; border-radius: var(--radius-sm);">
+                <span>📋 登録済みのドリル・宿題 (<span id="active-drills-count">0</span>)</span>
+                <span class="active-drills-accordion-arrow">▼</span>
+              </div>
+              <ul class="drill-settings-list" id="registered-drills-list" style="display: none; margin-top: 10px;">
+                <!-- JSで動的に追加されます -->
+              </ul>
+            </div>
+
+            <!-- おわったドリル（アーカイブ）アコーディオン -->
+            <div class="archived-drills-section" style="margin-top: 20px;">
+              <div class="archive-accordion-header" id="archive-accordion-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px; background-color: #f1f3f5; border: 1.5px solid var(--color-border); font-weight: 700; font-family: var(--font-family); font-size: 0.85rem; user-select: none; border-radius: var(--radius-sm);">
+                <span>🎒 完了したドリル・宿題 (<span id="archived-drills-count">0</span>)</span>
+                <span class="archive-accordion-arrow">▼</span>
+              </div>
+              <ul class="drill-settings-list" id="archived-drills-list" style="display: none; margin-top: 10px;">
+                <!-- JSで動的に追加されます -->
+              </ul>
+            </div>
+          </section>
+        </div>
+        
+        <!-- 2. 時間割設定コンテナ -->
+        <div id="sub-tab-schedule" class="settings-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <!-- 時間割設定セクション -->
+          <section class="settings-tab-section">
+            <h2 class="section-title" style="text-align: left; font-size: 0.95rem;">1週間の時間割設定</h2>
+            
+            <form class="schedule-form" id="schedule-form">
+              <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px;">✏️ 予定を登録する</h4>
+
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label" for="schedule-drill-select">ドリル・予定を選択</label>
+                <select id="schedule-drill-select" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-weight: 700; background-color: var(--color-bg-app); outline: none;">
+                  <option value="custom" selected>✍️ 直接入力する</option>
+                  <!-- JSで登録済みのドリルがここに追加されます -->
+                </select>
+              </div>
+
+              <!-- 編集用非表示IDフィールド -->
+              <input type="hidden" id="schedule-id-input">
+
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label">実施する曜日（複数選択可）</label>
+                <div class="weekday-checkboxes">
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="月">
+                    <span>月</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="火">
+                    <span>火</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="水">
+                    <span>水</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="木">
+                    <span>木</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="金">
+                    <span>金</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="土">
+                    <span>土</span>
+                  </label>
+                  <label class="weekday-checkbox-label schedule-weekday-checkbox-label">
+                    <input type="checkbox" name="schedule-days" value="日">
+                    <span>日</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label" for="schedule-category-select">カテゴリ</label>
+                <select id="schedule-category-select" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-weight: 700; background-color: var(--color-bg-app); outline: none;">
+                  <option value="ならいごと" selected>🏆 予定</option>
+                  <option value="べんきょう">📚 勉強</option>
+                  <option value="しゅくだい">📝 宿題</option>
+                  <option value="れんしゅう">🎹 練習</option>
+                  <option value="おてつだい">🏠 お手伝い</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label" for="schedule-name-input">予定名</label>
+                <input type="text" id="schedule-name-input" placeholder="例: ピアノの練習" required maxlength="20" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-family: var(--font-family); font-weight: 700; background-color: var(--color-bg-app);">
+              </div>
+              
+              <div class="form-group" style="margin-top: 10px; margin-bottom: 10px;">
+                <label class="form-label" for="schedule-desc-input">詳細メモ（任意）</label>
+                <textarea id="schedule-desc-input" placeholder="例: 16:00から。楽譜を忘れないでね！" maxlength="100" rows="2" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.85rem; outline: none; resize: none; background-color: var(--color-bg-app);"></textarea>
+              </div>
+
+              <button type="submit" id="btn-add-schedule" class="btn btn-add-schedule">✨ 保存する</button>
+            </form>
+            
+            <div class="registered-schedules-section" style="text-align: left; margin-top: 20px;">
+              <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px;">📋 登録済みの予定</h4>
+              <div class="schedule-tab-container" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; scrollbar-width: none;">
+                <button type="button" class="btn-choice active" data-day="all" style="font-size: 0.75rem; padding: 4px 10px;">すべて</button>
+                <button type="button" class="btn-choice" data-day="月" style="font-size: 0.75rem; padding: 4px 10px;">月</button>
+                <button type="button" class="btn-choice" data-day="火" style="font-size: 0.75rem; padding: 4px 10px;">火</button>
+                <button type="button" class="btn-choice" data-day="水" style="font-size: 0.75rem; padding: 4px 10px;">水</button>
+                <button type="button" class="btn-choice" data-day="木" style="font-size: 0.75rem; padding: 4px 10px;">木</button>
+                <button type="button" class="btn-choice" data-day="金" style="font-size: 0.75rem; padding: 4px 10px;">金</button>
+                <button type="button" class="btn-choice" data-day="土" style="font-size: 0.75rem; padding: 4px 10px;">土</button>
+                <button type="button" class="btn-choice" data-day="日" style="font-size: 0.75rem; padding: 4px 10px;">日</button>
+              </div>
+              <ul class="drill-settings-list" id="registered-schedules-list" style="max-height: none; overflow: visible; list-style: none; display: flex; flex-direction: column; gap: 8px; padding-left: 0;">
+                <!-- JSで動的に追加されます -->
+              </ul>
+            </div>
+          </section>
+        </div>
+        
+        <!-- 3. データ管理コンテナ -->
+        <div id="sub-tab-data" class="settings-sub-content" style="width: 100%; display: none; flex-direction: column; gap: 10px;">
+          <!-- クラウド同期セクション -->
+          <section class="settings-tab-section" id="cloud-status-section" style="display: none;">
+            <h2 class="section-title" style="font-size: 1.05rem; color: var(--color-secondary); text-align: center;">☁️ クラウド同期</h2>
+            <p style="font-size: 0.8rem; color: var(--color-text-light); margin-bottom: 12px; line-height: 1.4; text-align: center;">
+              ログイン中のアカウント:<br><strong id="cloud-user-email" style="color: var(--color-text); word-break: break-all;">---</strong><br>
+              <span style="font-size: 0.7rem; color: var(--color-success); font-weight: 700; display: inline-block; margin-top: 4px;">✔ データは自動同期されています</span>
+            </p>
+            <button type="button" id="btn-auth-logout" class="btn" style="background: #fff5f5; color: #e03131; border: 1.5px solid #ffc9c9; width: 100%; padding: 10px; font-weight: 700; font-size: 0.75rem;">
+              🚪 ログアウト
+            </button>
+          </section>
+
+          <section class="settings-tab-section" style="text-align: center;">
+            <h2 class="section-title" style="font-size: 1.05rem; color: #e03131; text-align: center;">⚠️ ローカルデータ管理</h2>
+            <p style="font-size: 0.8rem; color: var(--color-text-light); margin-bottom: 12px; line-height: 1.4;">
+              これまでの「達成した数」や「学習時間」の記録をすべて消去して、最初からやり直すことができます。
+            </p>
+            <button type="button" id="btn-reset-records" class="btn btn-reset-style" style="background: #e03131; color: white; padding: 10px 16px; font-size: 0.8rem; font-weight: 700; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all 0.1s;">
+              🧹 学習記録をリセットする
+            </button>
+          </section>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- 5. 下部タブバー (ナビゲーション) -->
+    <nav class="tab-bar">
+      <button type="button" class="tab-btn active" data-tab="adventure-tab">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label">ホーム</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="record-tab">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">記録</span>
+      </button>
+      <button type="button" class="tab-btn" data-tab="settings-tab">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">設定</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- 答え合わせモーダル (初期状態は非表示) -->
+  <div class="modal-overlay" id="check-answer-modal">
+    <div class="modal-content check-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1.1rem; margin-bottom: 0;">答え合わせ</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-check-modal">❌</button>
+      </div>
+      <p class="modal-intro" style="font-size: 0.85rem; margin-top: 8px;">「<span id="check-task-name" style="font-weight:700; color:var(--color-primary);">算数ドリル</span>」は終了しましたか？<br><span id="check-modal-sub-intro">丸付けをして、間違えた問題があったか入力してください。</span></p>
+      
+      <!-- まちがい入力フォーム -->
+      <form class="check-form" id="check-form">
+        <div class="form-group" id="actual-amount-group">
+          <label class="form-label" id="actual-amount-label" for="actual-amount-input">実際にやった量</label>
+          <input type="number" id="actual-amount-input" min="1" max="999" required style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-weight: 700; background-color: var(--color-bg-app); outline: none;">
+        </div>
+        <div class="form-group" id="mistake-input-group">
+          <label class="form-label" for="mistake-input">間違えた問題の内容 (なければ空欄でOK)</label>
+          <textarea id="mistake-input" rows="3" placeholder="例: 3ページの、足し算の筆算の繰り上がりを間違えた..." maxlength="100" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); font-family: var(--font-family); font-size: 0.85rem; outline: none; resize: none; background-color: var(--color-bg-app);"></textarea>
+        </div>
+
+        <!-- 📷 写真アップロードエリア -->
+        <div class="form-group" id="photo-upload-group" style="margin-top: 10px;">
+          <label class="form-label">📷 間違えた箇所の写真（任意）</label>
+          <div class="photo-upload-container" style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn" id="btn-trigger-upload" style="background-color: #FFFFFF; border: 1.5px dashed var(--color-primary); color: var(--color-primary); padding: 10px; font-size: 0.85rem; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">📷 写真をアップロード</button>
+            <input type="file" id="mistake-image-input" accept="image/*" style="display: none;">
+            <div class="image-preview-wrapper" id="image-preview-wrapper" style="display: none; position: relative; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border); overflow: hidden; width: 100px; height: 100px; background-color: #eee;">
+              <img id="mistake-image-preview" src="" alt="プレビュー" style="width: 100%; height: 100%; object-fit: cover;">
+              <button type="button" id="btn-remove-image" style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;">❌</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="check-modal-actions" style="margin-top: 16px; display: flex; gap: 8px;">
+          <button type="button" class="btn btn-all-correct" id="btn-all-correct" style="flex: 1; padding: 12px; font-size: 0.85rem;">💯 すべて正解</button>
+          <button type="submit" class="btn btn-submit-mistake" id="btn-submit-mistake" style="flex: 1; padding: 12px; font-size: 0.85rem; background: var(--color-primary); color: white;">🚀 間違いを記録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ユーザー切り替え・追加モーダル (初期状態は非表示) -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal-content user-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1.1rem; margin-bottom: 0;">ユーザー切り替え</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-user-modal">❌</button>
+      </div>
+      
+      <!-- ユーザーリスト -->
+      <div class="user-list-section" style="margin-top: 12px; text-align: left;">
+        <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">👇 ログインするユーザーを選択してください</h4>
+        <ul class="user-list" id="modal-user-list" style="list-style: none; padding-left: 0; display: flex; flex-direction: column; gap: 8px;">
+          <!-- JSで動的に追加されます -->
+        </ul>
+      </div>
+      
+      <hr class="modal-divider" style="margin: 16px 0; border: none; border-top: 1.5px solid var(--color-border);">
+      
+      <!-- 新規追加フォーム -->
+      <form class="add-user-form" id="user-form" style="text-align: left;">
+        <h4 class="form-sub-title" style="font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">➕ 新規ユーザー作成</h4>
+        <div style="display: flex; gap: 8px; width: 100%;">
+          <input type="text" id="new-user-name-input" placeholder="名前..." required maxlength="10" style="flex-grow: 1; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+          <button type="submit" class="btn btn-add-user" style="white-space: nowrap; background: var(--color-primary); color: white; padding: 10px 16px;">作成</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- プロフィール編集モーダル (アバター選択を削除しシンプルにお名前変更のみに) -->
+  <div class="modal-overlay" id="profile-edit-modal">
+    <div class="modal-content profile-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1.1rem; margin-bottom: 0;">プロフィールの編集</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-profile-modal">❌</button>
+      </div>
+      
+      <form id="profile-form" style="margin-top: 12px; text-align: left;">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="profile-name-input">名前</label>
+          <input type="text" id="profile-name-input" placeholder="名前..." required maxlength="10" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none; font-weight: 700; background-color: var(--color-bg-app);">
+        </div>
+        
+        <div class="profile-modal-actions" style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-cancel-profile" id="btn-cancel-profile" style="flex: 1; padding: 12px; background: #e9ecef; color: var(--color-text);">キャンセル</button>
+          <button type="submit" class="btn btn-save-profile" style="flex: 1; padding: 12px; background: var(--color-primary); color: white;">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- タスク繰り越し（延期）モーダル -->
+  <div class="modal-overlay" id="carryover-modal">
+    <div class="modal-content carryover-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" style="font-size: 1.1rem; margin-bottom: 0;">明日へ延期</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-carryover-modal">❌</button>
+      </div>
+      
+      <p style="font-size: 0.85rem; line-height: 1.5; margin: 12px 0; text-align: left;">
+        「<span id="carryover-task-name" style="font-weight: 700; color: var(--color-primary);">タスク</span>」を明日に回します。<br>
+        明日の目標量を選択してください。
+      </p>
+      
+      <div class="carryover-actions" style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+        <button type="button" class="btn btn-carryover-choice" id="btn-carryover-add" style="padding: 12px; text-align: left; background: #f8f9fa; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);">
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--color-primary);">📈 明日の目標に合算する（2日分実施）</div>
+          <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 4px;">明日の目標量に、今日の未完了分を上乗せします。</div>
+        </button>
+        
+        <button type="button" class="btn btn-carryover-choice" id="btn-carryover-replace" style="padding: 12px; text-align: left; background: #f8f9fa; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);">
+          <div style="font-weight: 700; font-size: 0.9rem; color: #1c7ed6;">🔄 明日の目標量に置き換える（追加なし）</div>
+          <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 4px;">今日の未完了分を明日に持ち越しますが、明日の目標量は増やしません。</div>
+        </button>
+        
+        <button type="button" class="btn" id="btn-cancel-carryover" style="padding: 10px; background: #e9ecef; color: var(--color-text); margin-top: 8px;">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ゲーム風確認モーダル (confirm用) -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal-content confirm-modal-content">
+      <div class="modal-header" style="border: none; padding-bottom: 0;">
+        <h3 class="modal-title" style="font-size: 1.1rem; margin-bottom: 0;">確認</h3>
+      </div>
+      <p id="confirm-modal-message" style="font-size: 0.85rem; margin: 16px 0; text-align: left; line-height: 1.5;">確認のメッセージ</p>
+      <div class="confirm-modal-actions" style="display: flex; gap: 8px;">
+        <button type="button" class="btn" id="btn-confirm-no" style="flex: 1; padding: 10px; background: #e9ecef; color: var(--color-text);">いいえ</button>
+        <button type="button" class="btn" id="btn-confirm-yes" style="flex: 1; padding: 10px; background: var(--color-primary); color: white;">はい</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 達成おめでとうモーダル -->
+  <div class="modal-overlay" id="congratulations-modal">
+    <div class="modal-content congratulations-modal-content" style="background: linear-gradient(135deg, #fff9db 0%, #ffffff 100%); border: 3px solid #fcc419; max-width: 320px; text-align: center; padding: 24px 16px;">
+      <div style="font-size: 3.5rem; margin-bottom: 12px; animation: bounce 0.6s infinite alternate; display: inline-block; line-height: 1.1;">💮</div>
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: #e67700; margin: 0 0 10px 0;">今日のタスク達成！</h3>
+      <p style="font-size: 0.85rem; line-height: 1.5; color: var(--color-text); margin: 0 0 20px 0;">
+        おめでとうございます！🎉<br>
+        <strong>今日のすべてのタスクを完了しました！</strong><br>
+        カレンダーに「はなまる💮」がつきました！
+      </p>
+      <button type="button" class="btn" id="btn-close-congratulations" style="background: #fcc419; color: #5c3e00; width: 100%; padding: 12px; font-weight: 700; font-size: 0.9rem; box-shadow: var(--shadow-soft);">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ログイン・アカウント作成画面 -->
+  <div id="auth-container" class="modal-overlay auth-container" style="display: none; justify-content: center; align-items: center; z-index: 9999; background: rgba(0,0,0,0.5);">
+    <div class="modal-content auth-card" style="max-width: 340px; width: 90%; text-align: center; padding: 24px 20px;">
+      <div style="font-size: 3rem; margin-bottom: 8px;">📚</div>
+      <h3 id="auth-title" style="font-size: 1.25rem; font-weight: 900; color: var(--color-text); margin: 0 0 4px 0;">スタディマネージャー</h3>
+      <p id="auth-subtitle" style="font-size: 0.8rem; color: var(--color-text-light); margin: 0 0 20px 0;">ログインしてデータを同期しよう！</p>
+      
+      <form id="auth-form" style="text-align: left; display: flex; flex-direction: column; gap: 12px;">
+        <div class="form-group">
+          <label class="form-label" for="auth-email">メールアドレス</label>
+          <input type="email" id="auth-email" placeholder="example@mail.com" required style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+        </div>
+        <div class="form-group" style="margin-bottom: 6px;">
+          <label class="form-label" for="auth-password">パスワード (6文字以上)</label>
+          <input type="password" id="auth-password" placeholder="••••••" required minlength="6" style="width: 100%; padding: 10px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); outline: none;">
+        </div>
+        
+        <button type="submit" id="btn-auth-submit" class="btn" style="background: var(--color-primary); color: white; width: 100%; padding: 12px; font-weight: 700; font-size: 0.9rem; margin-top: 8px;">ログイン</button>
+      </form>
+      
+      <div style="margin-top: 16px; font-size: 0.75rem; color: var(--color-text-light);">
+        <span id="auth-toggle-text">アカウントを持っていませんか？</span>
+        <button type="button" id="btn-auth-toggle" style="background: none; border: none; color: var(--color-secondary); font-weight: 700; cursor: pointer; text-decoration: underline; padding: 0;">新規登録する</button>
+      </div>
+
+      <hr style="margin: 20px 0; border: none; border-top: 1.5px solid var(--color-border);">
+
+      <!-- ローカルだけで使うための回避ボタン -->
+      <button type="button" id="btn-auth-skip" class="btn" style="background: #e9ecef; color: var(--color-text); width: 100%; padding: 10px; font-size: 0.75rem;">ログインせずに使う（この端末のみ）</button>
+    </div>
+  </div>
+
+  <!-- トースト通知用のコンテナ -->
+  <div id="game-toast-container" class="game-toast-container"></div>
+
+  <!-- Firebase SDK の読み込み (Compat版) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <!-- Firebase 設定の読み込み -->
+  <script src="firebase-config.js"></script>
+
+  <!-- JSの読み込み -->
+  <script src="app.js"></script>
+</body>
+</html>

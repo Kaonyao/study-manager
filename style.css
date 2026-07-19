@@ -1,0 +1,1214 @@
+/* ==========================================================================
+   学習管理ツール - CSS スタイル (シンプル＆モダン・ビジネス風リニューアル)
+   ========================================================================== */
+
+/* 1. デザインシステムの定義（カスタムプロパティ） */
+:root {
+  --font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  
+  /* 清潔感のあるモダンカラーパレット */
+  --color-bg-outer: #f4f6f8;        /* アプリ外側の背景 */
+  --color-bg-app: #ffffff;          /* アプリのベース背景（純白） */
+  --color-text: #2b303a;            /* メインテキスト（ダークグレー） */
+  --color-text-light: #6c757d;      /* サブテキスト（ライトグレー） */
+  
+  --color-primary: #ff922b;         /* オレンジ（宿題・ドリルなど） */
+  --color-primary-light: #ffe8cc;
+  --color-secondary: #339af0;       /* ブルー（時間割・予定など） */
+  --color-secondary-light: #e7f5ff;
+  --color-success: #51cf66;         /* グリーン（完了・成功など） */
+  --color-success-light: #ebfbee;
+  --color-warning: #fcc419;         /* イエロー */
+  --color-danger: #ff6b6b;          /* レッド（削除・リセットなど） */
+  
+  --color-card-bg: #ffffff;         /* カード背景 */
+  --color-border: #e9ecef;          /* 枠線用グレー */
+  
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.08);
+  
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-round: 24px;
+}
+
+/* 2. リセット & ベース */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background-color: var(--color-bg-outer);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* 3. モバイルファーストのスマホ風コンテナ */
+.phone-container {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  max-height: 920px;
+  background-color: var(--color-bg-app);
+  box-shadow: var(--shadow-medium);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* PC表示のときはスマホ風の枠と角丸をつける */
+@media (min-width: 481px) {
+  .phone-container {
+    border-radius: 36px;
+    border: 10px solid #2b303a;
+    height: 95vh;
+  }
+}
+
+/* 4. ヘッダー：シンプル＆スマートな情報表示 */
+.app-header {
+  background-color: #ffffff;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  z-index: 10;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-badge {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.btn-user-switch {
+  background-color: #f1f3f5;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-user-switch:hover {
+  background-color: #e9ecef;
+}
+
+.btn-edit-profile {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary) !important;
+}
+
+.btn-edit-profile:hover {
+  background-color: #d0ebff !important;
+}
+
+.date-info {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-light);
+}
+
+/* 進捗率インジケーター */
+.header-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.progress-bar-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+
+.progress-bar-container {
+  width: 100%;
+  background-color: #e9ecef;
+  height: 8px;
+  border-radius: var(--radius-round);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-secondary) 0%, #4dabf7 100%);
+  width: 0%;
+  border-radius: var(--radius-round);
+  transition: width 0.6s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+/* 5. メイン：スクロールエリアの最適化 */
+.app-main {
+  flex-grow: 1;
+  overflow: hidden;
+  padding: 12px; /* 16pxから12pxに余白を削減 */
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* 隙間を削減 */
+  min-height: 0;
+  background-color: #f8f9fa;
+}
+
+/* タブコンテンツの基本レイアウト */
+.tab-content {
+  display: none;
+  flex-direction: column;
+  flex-grow: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tab-content.active {
+  display: flex !important;
+}
+
+/* 各セクションのタイトル */
+.section-title {
+  font-size: 0.95rem; /* 1remから少しコンパクトに */
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+/* 6. タスク管理エリア（最大化対応） */
+.task-section {
+  background-color: var(--color-card-bg);
+  border-radius: var(--radius-md);
+  padding: 12px; /* 16pxから12pxに余白を削減 */
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* メイン画面全体に広げる */
+  overflow: hidden;
+}
+
+/* カテゴリ切り替えタブ */
+.task-category-tabs {
+  display: flex;
+  justify-content: space-between; /* 横並び1行で均等割付 */
+  gap: 3px;
+  padding-bottom: 2px;
+  margin-top: 4px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.category-tab-btn {
+  flex: 1;
+  background-color: #f1f3f5;
+  border: none;
+  border-radius: var(--radius-sm); /* すっきりした角丸に統一 */
+  padding: 4px 0; /* 左右を0にして1行でのはみ出しを防ぎ、上下を4pxにして高さを最小限に抑える */
+  font-size: 0.65rem; /* スマホ表示サイズでも1行に収まるように極小化 */
+  font-weight: 700; /* 視認性のために太字 */
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.category-tab-btn.active {
+  background-color: var(--color-text);
+  color: #ffffff;
+}
+
+/* スクロール可能なタスクリストコンテナ */
+.task-list-wrapper {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.task-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.task-item {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.task-item:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: #ced4da;
+}
+
+/* カテゴリごとの視認性重視の淡い背景色とカラー枠線 */
+.task-item.cat-study {
+  background-color: #f3f9fe;
+  border-color: #d0ebff;
+}
+.task-item.cat-lesson {
+  background-color: #f8f6ff;
+  border-color: #e5dbff;
+}
+.task-item.cat-homework {
+  background-color: #fffaf5;
+  border-color: #ffe8cc;
+}
+.task-item.cat-practice {
+  background-color: #fff5f8;
+  border-color: #ffdeeb;
+}
+.task-item.cat-help {
+  background-color: #f6fdf8;
+  border-color: #d3f9d8;
+}
+
+/* 完了状態はトーンダウンしたグレーで均一化 */
+.task-item.completed {
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  box-shadow: none;
+}
+
+.task-item-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px; /* 上下を詰めてコンパクトにし、1画面の表示件数を増やす */
+}
+
+.task-label {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  margin: 0;
+  cursor: pointer;
+}
+
+.task-text-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+/* カスタムチェックボックス */
+.task-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ced4da;
+  border-radius: 4px;
+  background-color: #ffffff;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.task-checkbox:checked ~ .custom-checkbox {
+  background-color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.custom-checkbox::after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 4px;
+  height: 9px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.task-checkbox:checked ~ .custom-checkbox::after {
+  display: block;
+}
+
+.task-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text);
+  transition: color 0.2s, text-decoration 0.2s;
+}
+
+.task-checkbox:checked ~ .task-text {
+  text-decoration: line-through;
+  color: var(--color-text-light);
+}
+
+/* 目標バッジのスタイル */
+.task-goal-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 4px;
+}
+
+.task-goal-badge.page {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.task-goal-badge.question {
+  background-color: #f3f0ff;
+  color: #7950f2;
+}
+
+.task-goal-badge.time {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary);
+}
+
+.task-goal-badge.done {
+  background-color: #e9ecef !important;
+  color: var(--color-text-light) !important;
+}
+
+.task-cat-badge {
+  font-size: 0.85rem;
+  margin-right: 4px;
+}
+
+/* アクションボタン類 */
+.btn-delete-task, .btn-postpone-task, .btn-revert-task {
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-delete-task:hover {
+  background-color: #fff5f5;
+  color: var(--color-danger);
+}
+
+.btn-postpone-task:hover {
+  background-color: #fff9db;
+  color: #e67700;
+}
+
+.btn-revert-task:hover {
+  background-color: #ebfbee;
+  color: var(--color-success);
+}
+
+/* メモ詳細アコーディオン */
+.task-desc-panel {
+  padding: 8px 12px 10px 38px;
+  background-color: #fafbfc;
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.task-text-clickable {
+  cursor: pointer;
+}
+
+.task-desc-toggle-indicator {
+  display: inline-block;
+  font-size: 0.65rem;
+  color: var(--color-text-light);
+  margin-left: 4px;
+  transition: transform 0.2s;
+}
+
+.task-desc-toggle-indicator.open {
+  transform: rotate(90deg);
+}
+
+/* 新規タスク追加フォーム */
+.add-task-form input[type="text"] {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px; /* 10px 14pxからコンパクトに */
+  font-family: var(--font-family);
+  font-size: 0.8rem; /* 0.85remから少し縮小 */
+  font-weight: 500;
+  outline: none;
+  background-color: #ffffff;
+  transition: border-color 0.2s;
+}
+
+.add-task-form input[type="text"]:focus {
+  border-color: var(--color-secondary);
+}
+
+/* 7. ボタンの共通設計（押しやすさを維持） */
+.btn {
+  font-family: var(--font-family);
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px; /* 10px 16pxからコンパクトに */
+  font-size: 0.8rem; /* 0.85remから少し縮小 */
+  transition: background-color 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-add {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-add:hover {
+  background-color: #f76707;
+}
+
+.btn-icon-text {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary);
+  border: none; /* デフォルトの黒枠線を削除 */
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-icon-text:hover {
+  background-color: #d0ebff;
+}
+
+/* 子タブ切り替えメニュー（きろく・設定用） */
+.records-sub-tabs, .settings-sub-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.sub-tab-btn {
+  flex: 1;
+  background-color: #e9ecef;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 4px;
+  font-family: var(--font-family);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.sub-tab-btn.active {
+  background-color: var(--color-secondary);
+  color: #ffffff;
+}
+
+/* 8. 設定タブ & データ管理 */
+.settings-sub-content, .records-sub-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  height: 100%;
+  min-height: 0; /* フレックスアイテム縮小許可 */
+  flex-grow: 1;
+}
+
+.settings-tab-section {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-family: var(--font-family);
+  font-size: 0.85rem;
+  font-weight: 500;
+  background-color: #ffffff;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--color-secondary);
+}
+
+.form-row-three {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.goal-type-tabs, .drill-category-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.goal-type-btn, .category-choice-btn {
+  flex: 1;
+  background-color: #f1f3f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.goal-type-btn.active, .category-choice-btn.active {
+  background-color: var(--color-secondary-light);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.drill-input-group-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  margin-top: 10px;
+  border-bottom: 1px dashed var(--color-border);
+  padding-bottom: 4px;
+}
+
+.btn-add-drill, .btn-add-schedule {
+  background-color: var(--color-secondary);
+  color: #ffffff;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.btn-add-drill:hover, .btn-add-schedule:hover {
+  background-color: var(--color-secondary-hover);
+}
+
+/* 登録済みリスト */
+.drill-settings-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drill-settings-item, .schedule-settings-item {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drill-settings-header, .schedule-item-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drill-settings-name, .schedule-item-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.drill-item-actions button, .schedule-item-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 0.95rem;
+}
+
+.drill-progress-container {
+  width: 100%;
+  background-color: #e9ecef;
+  height: 6px;
+  border-radius: var(--radius-round);
+  overflow: hidden;
+}
+
+.drill-progress-fill {
+  height: 100%;
+  background-color: var(--color-success);
+  width: 0%;
+  border-radius: var(--radius-round);
+  transition: width 0.4s ease;
+}
+
+.weekday-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.schedule-weekday-checkbox-label input {
+  display: none;
+}
+
+.schedule-weekday-checkbox-label span {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #f1f3f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.schedule-weekday-checkbox-label input:checked + span {
+  background-color: var(--color-secondary-light);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+.schedule-tab-container {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-choice {
+  background-color: #f1f3f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  cursor: pointer;
+}
+
+.btn-choice.active {
+  background-color: var(--color-secondary-light);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+}
+
+/* 9. にがてタブ（アルバム＆メモ） */
+.nigate-folders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nigate-folder-card {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-soft);
+}
+
+.nigate-mistakes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px dashed var(--color-border);
+  padding-top: 8px;
+}
+
+.nigate-mistake-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+}
+
+.btn-start-single-quiz, .btn-start-nigate-quiz {
+  display: none !important; /* RPGクイズ関連ボタンは非表示・廃止 */
+}
+
+/* まちがい写真アルバム */
+.nigate-album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.nigate-album-item {
+  width: 70px;
+  height: 70px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  background-color: #eee;
+  transition: transform 0.2s;
+}
+
+.nigate-album-item:hover {
+  transform: scale(1.05);
+}
+
+.nigate-album-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.nigate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.nigate-badge.calc {
+  background-color: #fff5f5;
+  color: var(--color-danger);
+}
+
+.nigate-badge.kanji {
+  background-color: #fff9db;
+  color: #f59f00;
+}
+
+.nigate-badge.reading {
+  background-color: var(--color-secondary-light);
+  color: var(--color-secondary);
+}
+
+.nigate-badge.other {
+  background-color: #f1f3f5;
+  color: var(--color-text-light);
+}
+
+.nigate-badge-count {
+  background-color: rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 0 4px;
+  font-size: 0.65rem;
+}
+
+/* 10. カレンダー表示 */
+.calendar-container {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.btn-calendar-nav {
+  background-color: #f1f3f5;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  margin-bottom: 6px;
+}
+
+.calendar-weekdays .sun {
+  color: var(--color-danger);
+}
+
+.calendar-weekdays .sat {
+  color: var(--color-secondary);
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  background-color: #fafbfc;
+  transition: all 0.2s;
+}
+
+.calendar-day:hover {
+  background-color: #e9ecef;
+}
+
+.calendar-day.other-month {
+  color: #adb5bd;
+  background-color: transparent;
+}
+
+.calendar-day.today {
+  background-color: #e8f4fd;
+  color: var(--color-secondary);
+  border: 1px solid var(--color-secondary);
+}
+
+.calendar-day.selected {
+  background-color: var(--color-secondary) !important;
+  color: #ffffff !important;
+}
+
+.calendar-day.has-completed .completed-dot {
+  width: 5px;
+  height: 5px;
+  background-color: var(--color-success);
+  border-radius: 50%;
+  position: absolute;
+  bottom: 4px;
+}
+
+.calendar-day.selected.has-completed .completed-dot {
+  background-color: #ffffff;
+}
+
+/* 11. 下部タブバー (ナビゲーション) */
+.tab-bar {
+  background-color: #ffffff;
+  border-top: 1px solid var(--color-border);
+  height: 60px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  height: 100%;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  color: var(--color-secondary);
+}
+
+.tab-icon {
+  font-size: 1.25rem;
+}
+
+.tab-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* 12. モーダル表示システム */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(43, 48, 58, 0.5);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-content {
+  background-color: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  width: 90%;
+  max-width: 380px;
+  box-shadow: var(--shadow-medium);
+  transform: scale(0.95);
+  transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+/* トースト通知 */
+.game-toast-container {
+  position: absolute;
+  bottom: 76px;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 複数トーストでも中央揃え */
+  gap: 8px;
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.game-toast {
+  background-color: #2b303a;
+  color: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-medium);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  max-width: 100%; /* 親コンテナ(padding考慮)の幅からはみ出さない */
+  box-sizing: border-box;
+}
+
+.game-toast.show {
+  opacity: 0.95;
+  transform: translateY(0);
+}
+
+/* 進捗シミュレーション表示モード */
+.simulation-banner {
+  background-color: var(--color-secondary-light);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.history-item {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.history-item-date {
+  font-size: 0.7rem;
+  color: var(--color-text-light);
+  margin-right: 8px;
+}
+
+.history-item-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.history-item-amount {
+  color: var(--color-secondary);
+}
+
+.nigate-empty-card {
+  text-align: center;
+  padding: 20px;
+  color: var(--color-text-light);
+  font-size: 0.8rem;
+}
+
+/* はなまるカレンダーセル（数字の周囲にテスト用紙のような二重赤丸を施す設計） */
+.calendar-day-num {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+/* すべて完了した日の日付に赤丸（二重丸風）を表示 */
+.calendar-day.has-all-completed .calendar-day-num {
+  border: 2px solid #e03131; /* 赤丸 */
+  color: #e03131 !important; /* 文字の色を赤に */
+  font-weight: 800;
+  background-color: #fff5f5; /* 内側をほんのり薄ピンク */
+  box-shadow: 0 0 0 2px #ffe3e3; /* 外側に薄いピンクの輪を追加して二重丸にする */
+}
+
+/* 選択されているとき（青背景の上で非常に高いコントラストを持つゴールドの二重丸に変更） */
+.calendar-day.selected.has-all-completed .calendar-day-num {
+  border-color: #ffd43b; /* ゴールドの丸 */
+  color: #ffd43b !important; /* 文字の色をゴールドにし、視認性を最大化 */
+  background-color: rgba(253, 242, 194, 0.15); /* 内側を非常に薄い黄色に */
+  box-shadow: 0 0 0 2px rgba(255, 212, 59, 0.45); /* ゴールドの二重リング */
+  font-weight: 900;
+}
+
+.calendar-day.has-all-completed {
+  border-color: #ffc9c9 !important; /* セル全体のボーダーも薄い赤に */
+  background-color: #fff5f5 !important; /* セル全体の背景も薄いピンクに */
+}
+
+@keyframes bounce {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-8px) scale(1.05); }
+}
+
+/* 12. ログイン・アカウント管理 */
+.auth-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-dark);
+}
+
+.btn-link:hover {
+  color: var(--color-secondary-hover) !important;
+}
