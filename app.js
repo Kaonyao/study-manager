@@ -187,7 +187,10 @@ function setupAuthObserver() {
       
       if (cloudUserEmail) cloudUserEmail.textContent = user.email;
       if (cloudStatusSection) cloudStatusSection.style.display = 'block';
-      if (authContainer) authContainer.style.display = 'none';
+      if (authContainer) {
+        authContainer.classList.remove('active');
+        authContainer.style.display = 'none';
+      }
 
       // クラウドデータの読み込み
       showGameToast("データを同期しています...", "☁️");
@@ -210,12 +213,16 @@ function setupAuthObserver() {
 
       console.log("[Firebase Auth] skip_login value:", sessionStorage.getItem('skip_login'));
       if (sessionStorage.getItem('skip_login') === 'true') {
-        if (authContainer) authContainer.style.display = 'none';
+        if (authContainer) {
+          authContainer.classList.remove('active');
+          authContainer.style.display = 'none';
+        }
         startLocalMode();
       } else {
         if (authContainer) {
-          console.log("[Firebase Auth] Displaying login screen (flex).");
+          console.log("[Firebase Auth] Displaying login screen (flex + active).");
           authContainer.style.display = 'flex';
+          authContainer.classList.add('active');
         } else {
           console.warn("[Firebase Auth] Cannot find #auth-container element!");
         }
