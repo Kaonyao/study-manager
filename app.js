@@ -87,6 +87,7 @@ const addTaskFormEl = document.getElementById('add-task-form');
 const newTaskInputEl = document.getElementById('new-task-input');
 const newTaskCategoryEl = document.getElementById('new-task-category');
 const newTaskDescEl = document.getElementById('new-task-desc');
+const newTaskDrillSelectEl = document.getElementById('new-task-drill-select');
 
 // 設定関連のDOM
 const drillFormEl = document.getElementById('drill-form');
@@ -1789,7 +1790,6 @@ function setupEventListeners() {
   }
 
   // iPadOS Safariでの選択肢ピッカー表示バグ・キャッシュ対策：タップ・フォーカス時に最新選択肢を動的更新
-  const newTaskDrillSelectEl = document.getElementById('new-task-drill-select');
   if (newTaskDrillSelectEl) {
     const refreshDrillOptions = () => renderNewTaskDrillOptions();
     newTaskDrillSelectEl.addEventListener('focus', refreshDrillOptions);
