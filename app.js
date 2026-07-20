@@ -156,6 +156,7 @@ function init() {
 // 従来のローカルモードでの初期化
 function startLocalMode() {
   try {
+    gameState.simulationMode = false;
     loadData();
     checkDateChange();
     generateDailyTasks();
@@ -199,6 +200,7 @@ function setupAuthObserver() {
       
       // アプリ画面の更新
       try {
+        gameState.simulationMode = false;
         checkDateChange();
         generateDailyTasks();
         renderTasks();
@@ -308,7 +310,7 @@ async function loadCloudData() {
         if (data.gameState.userProfile) gameState.userProfile = data.gameState.userProfile;
         if (data.gameState.allCompletedDates) gameState.allCompletedDates = data.gameState.allCompletedDates;
         if (data.gameState.weeklyReportMode) gameState.weeklyReportMode = data.gameState.weeklyReportMode;
-        if (data.gameState.simulationMode) gameState.simulationMode = data.gameState.simulationMode;
+        gameState.simulationMode = false;
       }
       if (data.weeklySchedules) gameState.weeklySchedules = data.weeklySchedules;
       if (data.mistakeRecords) gameState.mistakeRecords = data.mistakeRecords;
