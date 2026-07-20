@@ -352,9 +352,9 @@
             <div class="registered-drills-section" style="margin-top: 20px;">
               <div class="archive-accordion-header" id="registered-drills-accordion-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 10px; background-color: #f1f3f5; border: 1.5px solid var(--color-border); font-weight: 700; font-family: var(--font-family); font-size: 0.85rem; user-select: none; border-radius: var(--radius-sm);">
                 <span>📋 登録済みのドリル・宿題 (<span id="active-drills-count">0</span>)</span>
-                <span class="active-drills-accordion-arrow">▼</span>
+                <span class="active-drills-accordion-arrow">▲</span>
               </div>
-              <ul class="drill-settings-list" id="registered-drills-list" style="display: none; margin-top: 10px;">
+              <ul class="drill-settings-list" id="registered-drills-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
                 <!-- JSで動的に追加されます -->
               </ul>
             </div>
@@ -365,7 +365,7 @@
                 <span>🎒 完了したドリル・宿題 (<span id="archived-drills-count">0</span>)</span>
                 <span class="archive-accordion-arrow">▼</span>
               </div>
-              <ul class="drill-settings-list" id="archived-drills-list" style="display: none; margin-top: 10px;">
+              <ul class="drill-settings-list" id="archived-drills-list" style="display: none; margin-top: 10px; max-height: 200px; overflow-y: auto; padding-right: 4px;">
                 <!-- JSで動的に追加されます -->
               </ul>
             </div>
@@ -463,7 +463,7 @@
                 <button type="button" class="btn-choice" data-day="土" style="font-size: 0.75rem; padding: 4px 10px;">土</button>
                 <button type="button" class="btn-choice" data-day="日" style="font-size: 0.75rem; padding: 4px 10px;">日</button>
               </div>
-              <ul class="drill-settings-list" id="registered-schedules-list" style="max-height: none; overflow: visible; list-style: none; display: flex; flex-direction: column; gap: 8px; padding-left: 0;">
+              <ul class="drill-settings-list" id="registered-schedules-list" style="max-height: 280px; overflow-y: auto; padding-right: 4px; list-style: none; display: flex; flex-direction: column; gap: 8px; padding-left: 0;">
                 <!-- JSで動的に追加されます -->
               </ul>
             </div>

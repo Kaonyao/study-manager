@@ -1533,3 +1533,33 @@ html, body {
     background-color: #fff5f5;
   }
 }
+
+/* ⚙️ 設定タブ内のリストスクロールエリア＆高密度表示スタイリング */
+.drill-settings-list {
+  scrollbar-width: thin;
+  scrollbar-color: #ced4da #f1f3f5;
+}
+
+.drill-settings-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.drill-settings-list::-webkit-scrollbar-track {
+  background: #f1f3f5;
+  border-radius: 4px;
+}
+
+.drill-settings-list::-webkit-scrollbar-thumb {
+  background: #ced4da;
+  border-radius: 4px;
+}
+
+.drill-settings-list::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+/* 設定カードのコンパクト最適化 */
+.drill-settings-item,
+.schedule-item {
+  padding: 8px 10px !important;
+}
