@@ -1788,6 +1788,15 @@ function setupEventListeners() {
     });
   }
 
+  // iPadOS Safariでの選択肢ピッカー表示バグ・キャッシュ対策：タップ・フォーカス時に最新選択肢を動的更新
+  const newTaskDrillSelectEl = document.getElementById('new-task-drill-select');
+  if (newTaskDrillSelectEl) {
+    const refreshDrillOptions = () => renderNewTaskDrillOptions();
+    newTaskDrillSelectEl.addEventListener('focus', refreshDrillOptions);
+    newTaskDrillSelectEl.addEventListener('pointerdown', refreshDrillOptions);
+    newTaskDrillSelectEl.addEventListener('touchstart', refreshDrillOptions);
+  }
+
   // 答え合わせモーダル制御
   btnAllCorrectEl.addEventListener('click', handleAllCorrect);
   checkFormEl.addEventListener('submit', handleSubmitMistake);
@@ -2728,12 +2737,13 @@ function handleAddWeeklySchedule(event) {
   }
 }
 
-// 新しいタスク追加用プルダウンの生成 (iPadOS Safariのoptgroup非表示バグに対応したフラット構造)
+// 新しいタスク追加用プルダウンの生成 (iPadOS Safariのoptgroup非表示バグ＆キャッシュ対策対応)
 function renderNewTaskDrillOptions() {
   const selectEl = document.getElementById('new-task-drill-select');
   if (!selectEl) return;
 
-  selectEl.innerHTML = '<option value="custom" selected>✏️ 自分で決める (カスタム)</option>';
+  const currentVal = selectEl.value;
+  selectEl.innerHTML = '<option value="custom">✏️ 自分で決める (カスタム)</option>';
 
   const categoryMap = {
     'べんきょう': '勉強',
@@ -2745,7 +2755,6 @@ function renderNewTaskDrillOptions() {
 
   const activeDrills = drills.filter(d => !d.archived);
   if (activeDrills.length > 0) {
-    // iPadOS Safariでのピッカー非表示バグを防止するため、optgroupではなくdisabled optionをヘッダーとして追加
     const disabledHeader = document.createElement('option');
     disabledHeader.disabled = true;
     disabledHeader.textContent = '── 📚 登録済みのドリル ──';
@@ -2785,6 +2794,12 @@ function renderNewTaskDrillOptions() {
       opt.textContent = `🏆 ${schedule.name} (${catLabel})`;
       selectEl.appendChild(opt);
     });
+  }
+
+  if (Array.from(selectEl.options).some(o => o.value === currentVal)) {
+    selectEl.value = currentVal;
+  } else {
+    selectEl.value = 'custom';
   }
 }
 
