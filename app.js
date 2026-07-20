@@ -2038,8 +2038,8 @@ function setupEventListeners() {
   const archivedDrillsList = document.getElementById('archived-drills-list');
   if (archiveAccordionHeader && archivedDrillsList) {
     archiveAccordionHeader.addEventListener('click', () => {
-      const isHidden = archivedDrillsList.style.display === 'none' || archivedDrillsList.style.display === '';
-      archivedDrillsList.style.display = isHidden ? 'block' : 'none';
+      const isHidden = window.getComputedStyle(archivedDrillsList).display === 'none';
+      archivedDrillsList.style.display = isHidden ? 'flex' : 'none';
       const arrow = archiveAccordionHeader.querySelector('.archive-accordion-arrow');
       if (arrow) {
         arrow.textContent = isHidden ? '▲' : '▼';
@@ -2052,8 +2052,8 @@ function setupEventListeners() {
   const registeredDrillsList = document.getElementById('registered-drills-list');
   if (registeredDrillsAccordionHeader && registeredDrillsList) {
     registeredDrillsAccordionHeader.addEventListener('click', () => {
-      const isHidden = registeredDrillsList.style.display === 'none' || registeredDrillsList.style.display === '';
-      registeredDrillsList.style.display = isHidden ? 'block' : 'none';
+      const isHidden = window.getComputedStyle(registeredDrillsList).display === 'none';
+      registeredDrillsList.style.display = isHidden ? 'flex' : 'none';
       const arrow = registeredDrillsAccordionHeader.querySelector('.active-drills-accordion-arrow');
       if (arrow) {
         arrow.textContent = isHidden ? '▲' : '▼';
