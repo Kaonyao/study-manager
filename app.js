@@ -2536,6 +2536,10 @@ function switchRecordsSubTab(subTabName) {
 // 設定タブの初期描画
 function renderSettingsTab() {
   updateDrillTimingSelectOptions();
+  renderDrillSettingsList();
+  renderScheduleDrillOptions();
+  renderRegisteredSchedulesList();
+
   const activeSubTab = document.querySelector('.sub-tab-btn.active');
   const activeSubTabName = activeSubTab ? activeSubTab.dataset.subtab : 'drills';
   switchSettingsSubTab(activeSubTabName);
