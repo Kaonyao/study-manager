@@ -146,27 +146,73 @@ function init() {
   // 初期化中の部分エラーがあってもイベント登録と設定タブ描画は必ず実行する
   try {
     setupEventListeners();
+  } catch (e) {
+    console.error("setupEventListeners failed in init:", e);
+  }
+
+  try {
     setupAuthFormListeners(); // Firebase認証関連のイベントリスナー登録
+  } catch (e) {
+    console.error("setupAuthFormListeners failed in init:", e);
+  }
+
+  try {
+    renderNewTaskDrillOptions(); // 最優先で初期描画を実行
+  } catch (e) {
+    console.error("renderNewTaskDrillOptions failed in init:", e);
+  }
+
+  try {
     renderSettingsTab(); // 設定タブの初期描画
-    renderNewTaskDrillOptions(); // タスク追加用プルダウンの初期描画
-  } catch (err) {
-    console.error("EventListeners or settings tab setup failed:", err);
+  } catch (e) {
+    console.error("renderSettingsTab failed in init:", e);
   }
 }
 
 // 従来のローカルモードでの初期化
 function startLocalMode() {
+  gameState.simulationMode = false;
+  
   try {
-    gameState.simulationMode = false;
-    loadData();
-    checkDateChange();
-    generateDailyTasks();
-    renderTasks();
-    renderNigateBuster();
-    updateUI();
     renderNewTaskDrillOptions();
-  } catch (err) {
-    console.error("Local Initialization warning:", err);
+  } catch (e) {
+    console.error("renderNewTaskDrillOptions failed in startLocalMode:", e);
+  }
+
+  try {
+    loadData();
+  } catch (e) {
+    console.error("loadData failed in startLocalMode:", e);
+  }
+
+  try {
+    checkDateChange();
+  } catch (e) {
+    console.error("checkDateChange failed in startLocalMode:", e);
+  }
+
+  try {
+    generateDailyTasks();
+  } catch (e) {
+    console.error("generateDailyTasks failed in startLocalMode:", e);
+  }
+
+  try {
+    renderTasks();
+  } catch (e) {
+    console.error("renderTasks failed in startLocalMode:", e);
+  }
+
+  try {
+    renderNigateBuster();
+  } catch (e) {
+    console.error("renderNigateBuster failed in startLocalMode:", e);
+  }
+
+  try {
+    updateUI();
+  } catch (e) {
+    console.error("updateUI failed in startLocalMode:", e);
   }
 }
 
@@ -199,19 +245,57 @@ function setupAuthObserver() {
       showGameToast("データを同期しています...", "☁️");
       await loadCloudData();
       
-      // アプリ画面の更新
+      // アプリ画面の更新 (各処理を個別try-catchで囲み、iPad等でのデータ整合性エラーに巻き込まれるのを防止)
+      gameState.simulationMode = false;
+      
       try {
-        gameState.simulationMode = false;
-        checkDateChange();
-        repairTodayCompletedTasks();
-        generateDailyTasks();
-        renderTasks();
-        renderNigateBuster();
-        updateUI();
-        if (typeof renderCalendar === 'function') renderCalendar();
         renderNewTaskDrillOptions();
       } catch (e) {
-        console.error("App render failed after cloud load:", e);
+        console.error("renderNewTaskDrillOptions failed after cloud load:", e);
+      }
+
+      try {
+        checkDateChange();
+      } catch (e) {
+        console.error("checkDateChange failed after cloud load:", e);
+      }
+
+      try {
+        repairTodayCompletedTasks();
+      } catch (e) {
+        console.error("repairTodayCompletedTasks failed after cloud load:", e);
+      }
+
+      try {
+        generateDailyTasks();
+      } catch (e) {
+        console.error("generateDailyTasks failed after cloud load:", e);
+      }
+
+      try {
+        renderTasks();
+      } catch (e) {
+        console.error("renderTasks failed after cloud load:", e);
+      }
+
+      try {
+        renderNigateBuster();
+      } catch (e) {
+        console.error("renderNigateBuster failed after cloud load:", e);
+      }
+
+      try {
+        updateUI();
+      } catch (e) {
+        console.error("updateUI failed after cloud load:", e);
+      }
+
+      try {
+        if (typeof renderCalendar === 'function') {
+          renderCalendar();
+        }
+      } catch (e) {
+        console.error("renderCalendar failed after cloud load:", e);
       }
     } else {
       currentFirebaseUser = null;
