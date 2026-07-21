@@ -3746,7 +3746,7 @@ function renderModalUserList() {
     // 現在のアクティブユーザー、およびユーザー数が1人の場合は削除できないようにする
     const showDelete = (user !== gameState.currentUser && gameState.users.length > 1);
     const deleteBtnHtml = showDelete ? `
-      <button type="button" class="btn-delete-user" data-user="${escapeHTML(user)}" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 0 4px; display:flex; align-items:center;" title="削除">🗑️</button>
+      <button type="button" class="btn-delete-user" data-user="${escapeHTML(user)}" style="background:none; border:1.5px solid #ffc9c9; background-color:#fff5f5; color:#fa5252; cursor:pointer; font-size:0.75rem; font-weight:700; padding: 6px 10px; display:flex; align-items:center; gap:2px; border-radius:var(--radius-sm); white-space:nowrap;" title="削除">🗑️ 削除</button>
     ` : '';
 
     li.innerHTML = `
