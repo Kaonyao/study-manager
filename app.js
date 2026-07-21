@@ -1128,57 +1128,88 @@ function repairTodayCompletedTasks() {
 
   // 4. 今日の時間割予定で、今日まだ未完了のまま「削除(deleted)」や「延期(postponed)」に他端末で落とされてしまった予定（ロボ団など）を
   // 時間割に存在する限り「active (未完了)」として強制復元するセルフヒーリング処理
-  const todayDay = getTodayDayName();
-  const todayDateStr = getTodayDateString();
-  const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
+  try {
+    const todayDay = typeof getTodayDayName === 'function' ? getTodayDayName() : "日";
+    const todayDateStr = typeof getTodayDateString === 'function' ? getTodayDateString() : new Date().toLocaleDateString('ja-JP');
+    const todaySchedules = gameState.weeklySchedules 
+      ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) 
+      : [];
 
-  todaySchedules.forEach(schedule => {
-    if (schedule.drillId) return; // ドリルは別の自動生成ロジックで制御されるためスキップ
+    todaySchedules.forEach(schedule => {
+      try {
+        if (!schedule || schedule.drillId) return; // ドリルは別の自動生成ロジックで制御されるためスキップ
 
-    const weeklyTaskId = `weekly_${schedule.id}_${todayDateStr}`;
-    
-    // 今日すでにこの予定が完了実績（completedTasks）にあるか？
-    const isCompleted = completedTasks && completedTasks.some(t => 
-      (t.text && t.text.trim() === schedule.name.trim()) && 
-      (t.completedDate === todayDateStr || t.date === todayDateStr)
-    );
-    if (isCompleted) return; // 完了していれば復活させない
+        const schedName = String(schedule.name || "").trim();
+        if (!schedName) return; // 名前が空ならスキップ
 
-    // 現在の今日のタスクに、未完了(active) または 完了(completed) として存在しているか？
-    const hasActiveOrCompleted = tasks.some(t => 
-      (t.id === weeklyTaskId || (t.text && t.text.trim() === schedule.name.trim())) && 
-      t.date === todayDateStr && 
-      (t.status === 'active' || t.status === 'completed')
-    );
-
-    // 存在していない（＝削除済み status:'deleted' や 延期 status:'postponed' になってしまっている）場合
-    if (!hasActiveOrCompleted) {
-      // もしすでに tasks 内に 'deleted' や 'postponed' のタスクがあれば、ステータスを 'active' に修復して復活！
-      const existingIdx = tasks.findIndex(t => 
-        (t.id === weeklyTaskId || (t.text && t.text.trim() === schedule.name.trim())) && 
-        t.date === todayDateStr
-      );
-
-      if (existingIdx !== -1) {
-        tasks[existingIdx].status = 'active';
-        tasks[existingIdx].id = weeklyTaskId; // IDも整合
-        tasks[existingIdx].text = schedule.name;
-        repaired = true;
-      } else {
-        // 全く存在しなければ新規追加
-        tasks.push({
-          id: weeklyTaskId,
-          text: schedule.name,
-          status: 'active',
-          drillId: null,
-          category: schedule.category || 'ならいごと',
-          description: schedule.description || '',
-          date: todayDateStr
+        const weeklyTaskId = `weekly_${schedule.id || Date.now()}_${todayDateStr}`;
+        
+        // 今日すでにこの予定が完了実績（completedTasks）にあるか？
+        const isCompleted = Array.isArray(completedTasks) && completedTasks.some(t => {
+          try {
+            if (!t) return false;
+            const tText = String(t.text || "").trim();
+            return tText === schedName && (t.completedDate === todayDateStr || t.date === todayDateStr);
+          } catch (e) {
+            return false;
+          }
         });
-        repaired = true;
+        if (isCompleted) return; // 完了していれば復活させない
+
+        // 現在の今日のタスクに、未完了(active) または 完了(completed) として存在しているか？
+        const hasActiveOrCompleted = Array.isArray(tasks) && tasks.some(t => {
+          try {
+            if (!t) return false;
+            const tText = String(t.text || "").trim();
+            const tId = String(t.id || "");
+            return (tId === weeklyTaskId || tText === schedName) && 
+                   t.date === todayDateStr && 
+                   (t.status === 'active' || t.status === 'completed');
+          } catch (e) {
+            return false;
+          }
+        });
+
+        // 存在していない（＝削除済み status:'deleted' や 延期 status:'postponed' になってしまっている）場合
+        if (!hasActiveOrCompleted && Array.isArray(tasks)) {
+          // もしすでに tasks 内に 'deleted' や 'postponed' のタスクがあれば、ステータスを 'active' に修復して復活！
+          const existingIdx = tasks.findIndex(t => {
+            try {
+              if (!t) return false;
+              const tText = String(t.text || "").trim();
+              const tId = String(t.id || "");
+              return (tId === weeklyTaskId || tText === schedName) && t.date === todayDateStr;
+            } catch (e) {
+              return false;
+            }
+          });
+
+          if (existingIdx !== -1) {
+            tasks[existingIdx].status = 'active';
+            tasks[existingIdx].id = weeklyTaskId; // IDも整合
+            tasks[existingIdx].text = schedule.name || schedName;
+            repaired = true;
+          } else {
+            // 全く存在しなければ新規追加
+            tasks.push({
+              id: weeklyTaskId,
+              text: schedule.name || schedName,
+              status: 'active',
+              drillId: null,
+              category: schedule.category || 'ならいごと',
+              description: schedule.description || '',
+              date: todayDateStr
+            });
+            repaired = true;
+          }
+        }
+      } catch (err) {
+        console.error("Error healing single weekly schedule task:", err);
       }
-    }
-  });
+    });
+  } catch (err) {
+    console.error("Error during weekly schedules healing process:", err);
+  }
 
   if (repaired) {
     saveTasks();
