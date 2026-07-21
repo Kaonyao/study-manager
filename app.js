@@ -917,9 +917,18 @@ function generateDailyTasks(isNewDay = false) {
 
   let updated = false;
 
-  // 今日の未完了スケジュールタスクを一旦削除して再生成
+  // 今日すでに完了（completed）しているドリルを一覧化
+  const completedDrillIdsToday = new Set(
+    tasks.filter(t => t.date === todayDateStr && t.status === 'completed' && t.drillId).map(t => t.drillId)
+  );
+
+  // 今日の未完了スケジュールタスクを一旦削除して再生成（すでに同日完了しているドリルの未達成誤生成タスクも削除）
   const originalTaskCountForCleanup = tasks.length;
   tasks = tasks.filter(t => {
+    // 今日すでに完了しているドリルの未達成タスクが残っていれば排除
+    if (t.date === todayDateStr && t.status === 'active' && t.drillId && completedDrillIdsToday.has(t.drillId)) {
+      return false;
+    }
     if (t.date && t.date !== todayDateStr) return true;
     if (t.isManual) return true; // 手動追加されたタスクは自動削除・再生成しない
     if (t.status === 'completed' || t.status === 'postponed' || t.status === 'deleted') return true; // 完了・延期・削除済みのタスクは残す
@@ -938,6 +947,11 @@ function generateDailyTasks(isNewDay = false) {
     if (schedule.drillId) {
       const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
       if (!drill || drill.archived) return;
+
+      // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
+      if (completedDrillIdsToday.has(drill.id)) {
+        return;
+      }
 
       activeDrillIdsToday.add(drill.id);
 
