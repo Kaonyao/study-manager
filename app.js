@@ -1961,13 +1961,7 @@ function setupEventListeners() {
     });
   }
 
-  // iPadOS Safariでの選択肢ピッカー表示バグ・キャッシュ対策：タップ・フォーカス時に最新選択肢を動的更新
-  if (newTaskDrillSelectEl) {
-    const refreshDrillOptions = () => renderNewTaskDrillOptions();
-    newTaskDrillSelectEl.addEventListener('focus', refreshDrillOptions);
-    newTaskDrillSelectEl.addEventListener('pointerdown', refreshDrillOptions);
-    newTaskDrillSelectEl.addEventListener('touchstart', refreshDrillOptions);
-  }
+  // (iPadOS Safari無限ループ回避のためタップリスナーは削除)
 
   // 答え合わせモーダル制御
   btnAllCorrectEl.addEventListener('click', handleAllCorrect);
@@ -2912,16 +2906,13 @@ function handleAddWeeklySchedule(event) {
   }
 }
 
-// 新しいタスク追加用プルダウンの生成 (iPadOS Safariのドラムロールキャッシュバグを完全回避するためにDOM要素を丸ごと置き換え)
+// 新しいタスク追加用プルダウンの生成 (iPadOS Safariの無効属性バグを回避したフラットリスト)
 function renderNewTaskDrillOptions() {
   const selectEl = document.getElementById('new-task-drill-select');
   if (!selectEl) return;
 
   const currentVal = selectEl.value;
-
-  // 新しいクローン select 要素を作成し、古いピッカーキャッシュを完全破棄
-  const newSelectEl = selectEl.cloneNode(false);
-  newSelectEl.innerHTML = '<option value="custom">✏️ 自分で決める (カスタム)</option>';
+  selectEl.innerHTML = '<option value="custom">✏️ 自分で決める (カスタム)</option>';
 
   const categoryMap = {
     'べんきょう': '勉強',
@@ -2931,106 +2922,75 @@ function renderNewTaskDrillOptions() {
     'おてつだい': '手伝い'
   };
 
-  const activeDrills = drills.filter(d => !d.archived);
-  activeDrills.forEach(drill => {
-    const opt = document.createElement('option');
-    opt.value = `drill:${drill.id}`;
-    const catLabel = categoryMap[drill.category] || drill.category;
-    opt.textContent = `📚【ドリル】${drill.name} (${catLabel})`;
-    newSelectEl.appendChild(opt);
-  });
-
-  const uniqueLessons = [];
-  const addedLessonNames = new Set();
-  gameState.weeklySchedules.forEach(s => {
-    if (!s.drillId && s.name) {
-      const name = s.name.trim();
-      if (!addedLessonNames.has(name)) {
-        addedLessonNames.add(name);
-        uniqueLessons.push(s);
+  // 1. ドリル・宿題の追加（例外安全ガード）
+  try {
+    const activeDrills = Array.isArray(drills) ? drills.filter(d => d && !d.archived) : [];
+    activeDrills.forEach(drill => {
+      try {
+        const opt = document.createElement('option');
+        opt.value = `drill:${drill.id}`;
+        const catLabel = categoryMap[drill.category] || drill.category || "勉強";
+        const drillNameStr = String(drill.name || "名称未設定").trim();
+        opt.textContent = `📚【ドリル】${drillNameStr} (${catLabel})`;
+        selectEl.appendChild(opt);
+      } catch (err) {
+        console.error("Error adding drill option:", err);
       }
-    }
-  });
-
-  uniqueLessons.forEach(schedule => {
-    const opt = document.createElement('option');
-    opt.value = `schedule:${schedule.id}`;
-    const catLabel = categoryMap[schedule.category] || schedule.category;
-    opt.textContent = `🏆【予定】${schedule.name} (${catLabel})`;
-    newSelectEl.appendChild(opt);
-  });
-
-  if (Array.from(newSelectEl.options).some(o => o.value === currentVal)) {
-    newSelectEl.value = currentVal;
-  } else {
-    newSelectEl.value = 'custom';
+    });
+  } catch (err) {
+    console.error("Error processing drills filter:", err);
   }
 
-  // クローンにチェンジリスナーを再登録
-  newSelectEl.addEventListener('change', (e) => {
-    const val = e.target.value;
-    if (val === 'custom') {
-      newTaskInputEl.value = '';
-      newTaskInputEl.disabled = false;
-      newTaskCategoryEl.disabled = false;
-    } else if (val.startsWith('drill:')) {
-      const drillId = parseInt(val.split(':')[1], 10);
-      const drill = drills.find(d => d.id === drillId);
-      if (drill) {
-        let startPageVal = (drill.currentProgress || 0) + 1;
-        let startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
-        let taskText = "";
-        
-        if (drill.type === 'time') {
-          taskText = `${drill.name}（${drill.duration}分）`;
-        } else {
-          let pageText = "";
-          if (drill.totalPages > 0) {
-            const tomorrowPages = drill.tomorrowAmountOverride > 0 ? drill.tomorrowAmountOverride : drill.dailyAmount;
-            const endP = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
-            pageText = `P:${startPageVal}〜${endP}`;
+  // 2. 時間割の予定（習い事等）の追加（例外安全ガード）
+  const uniqueLessons = [];
+  const addedLessonNames = new Set();
+  
+  try {
+    if (gameState && gameState.weeklySchedules && Array.isArray(gameState.weeklySchedules)) {
+      gameState.weeklySchedules.forEach(s => {
+        try {
+          if (s && !s.drillId && s.name) {
+            const nameStr = String(s.name).trim(); // 数値などの型揺れも安全に文字列へキャスト
+            if (nameStr && !addedLessonNames.has(nameStr)) {
+              addedLessonNames.add(nameStr);
+              uniqueLessons.push(s);
+            }
           }
-          let questionText = "";
-          if (drill.totalQuestions > 0) {
-            const tomorrowQs = (drill.tomorrowAmountOverride > 0 && drill.type === 'question') ? drill.tomorrowAmountOverride : drill.dailyQuestionAmount;
-            const endQ = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
-            questionText = `Q:${startQuestionVal}〜${endQ}`;
-          }
-          let rangeText = "";
-          if (pageText && questionText) {
-            rangeText = `（${pageText} / ${questionText}）`;
-          } else if (pageText) {
-            rangeText = `（${pageText}）`;
-          } else if (questionText) {
-            rangeText = `（${questionText}）`;
-          }
-          taskText = `${drill.name}${rangeText}`;
+        } catch (err) {
+          console.error("Error processing single weekly schedule item:", err);
         }
-        newTaskInputEl.value = taskText;
-        newTaskInputEl.disabled = true;
-        newTaskCategoryEl.value = drill.category;
-        newTaskCategoryEl.disabled = true;
-      }
-    } else if (val.startsWith('schedule:')) {
-      const scheduleId = val.split(':')[1];
-      const schedule = gameState.weeklySchedules.find(s => s.id === scheduleId || s.id.toString() === scheduleId);
-      if (schedule) {
-        newTaskInputEl.value = schedule.name;
-        newTaskInputEl.disabled = true;
-        newTaskCategoryEl.value = schedule.category;
-        newTaskCategoryEl.disabled = true;
-      }
+      });
     }
-  });
+  } catch (err) {
+    console.error("Error processing weeklySchedules:", err);
+  }
 
-  // クローンにタップ時最新化リスナーを再登録
-  const refreshDrillOptions = () => renderNewTaskDrillOptions();
-  newSelectEl.addEventListener('focus', refreshDrillOptions);
-  newSelectEl.addEventListener('pointerdown', refreshDrillOptions);
-  newSelectEl.addEventListener('touchstart', refreshDrillOptions);
+  try {
+    uniqueLessons.forEach(schedule => {
+      try {
+        const opt = document.createElement('option');
+        opt.value = `schedule:${schedule.id}`;
+        const catLabel = categoryMap[schedule.category] || schedule.category || "予定";
+        const scheduleNameStr = String(schedule.name || "名称未設定").trim();
+        opt.textContent = `🏆【予定】${scheduleNameStr} (${catLabel})`;
+        selectEl.appendChild(opt);
+      } catch (err) {
+        console.error("Error adding schedule option:", err);
+      }
+    });
+  } catch (err) {
+    console.error("Error processing uniqueLessons:", err);
+  }
 
-  // 古い select 要素をクローン select にDOM上で置き換える
-  selectEl.parentNode.replaceChild(newSelectEl, selectEl);
+  try {
+    if (Array.from(selectEl.options).some(o => o.value === currentVal)) {
+      selectEl.value = currentVal;
+    } else {
+      selectEl.value = 'custom';
+    }
+  } catch (err) {
+    selectEl.value = 'custom';
+  }
 }
 
 // 予定の編集モード開始
