@@ -1999,6 +1999,9 @@ function setupEventListeners() {
         renderRecordTab();
       } else if (targetTabId === 'settings-tab') {
         renderSettingsTab();
+      } else if (targetTabId === 'adventure-tab') {
+        renderNewTaskDrillOptions();
+        renderTasks();
       }
     });
   });
@@ -2909,7 +2912,7 @@ function handleAddWeeklySchedule(event) {
   }
 }
 
-// 新しいタスク追加用プルダウンの生成 (iPadOS Safariのoptgroup非表示バグ＆キャッシュ対策対応)
+// 新しいタスク追加用プルダウンの生成 (iPadOS Safariのピッカー破壊を防止するためdisabled optionを完全に廃止)
 function renderNewTaskDrillOptions() {
   const selectEl = document.getElementById('new-task-drill-select');
   if (!selectEl) return;
@@ -2926,20 +2929,13 @@ function renderNewTaskDrillOptions() {
   };
 
   const activeDrills = drills.filter(d => !d.archived);
-  if (activeDrills.length > 0) {
-    const disabledHeader = document.createElement('option');
-    disabledHeader.disabled = true;
-    disabledHeader.textContent = '── 📚 登録済みのドリル ──';
-    selectEl.appendChild(disabledHeader);
-
-    activeDrills.forEach(drill => {
-      const opt = document.createElement('option');
-      opt.value = `drill:${drill.id}`;
-      const catLabel = categoryMap[drill.category] || drill.category;
-      opt.textContent = `📚 ${drill.name} (${catLabel})`;
-      selectEl.appendChild(opt);
-    });
-  }
+  activeDrills.forEach(drill => {
+    const opt = document.createElement('option');
+    opt.value = `drill:${drill.id}`;
+    const catLabel = categoryMap[drill.category] || drill.category;
+    opt.textContent = `📚【ドリル】${drill.name} (${catLabel})`;
+    selectEl.appendChild(opt);
+  });
 
   const uniqueLessons = [];
   const addedLessonNames = new Set();
@@ -2953,20 +2949,13 @@ function renderNewTaskDrillOptions() {
     }
   });
 
-  if (uniqueLessons.length > 0) {
-    const disabledHeader = document.createElement('option');
-    disabledHeader.disabled = true;
-    disabledHeader.textContent = '── 🏆 時間割の予定 ──';
-    selectEl.appendChild(disabledHeader);
-
-    uniqueLessons.forEach(schedule => {
-      const opt = document.createElement('option');
-      opt.value = `schedule:${schedule.id}`;
-      const catLabel = categoryMap[schedule.category] || schedule.category;
-      opt.textContent = `🏆 ${schedule.name} (${catLabel})`;
-      selectEl.appendChild(opt);
-    });
-  }
+  uniqueLessons.forEach(schedule => {
+    const opt = document.createElement('option');
+    opt.value = `schedule:${schedule.id}`;
+    const catLabel = categoryMap[schedule.category] || schedule.category;
+    opt.textContent = `🏆【予定】${schedule.name} (${catLabel})`;
+    selectEl.appendChild(opt);
+  });
 
   if (Array.from(selectEl.options).some(o => o.value === currentVal)) {
     selectEl.value = currentVal;
