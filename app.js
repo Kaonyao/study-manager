@@ -909,8 +909,71 @@ function getTodayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
+// 今日の実績データから「今日のすること」のタスクステータスと範囲を自動修復
+function repairTodayCompletedTasks() {
+  const todayDateStr = getTodayDateString();
+  if (!completedTasks || completedTasks.length === 0) return;
+
+  const todayCompletedDrillTasks = completedTasks.filter(t => 
+    t.completedDate === todayDateStr && t.drillId !== null && t.drillId !== undefined
+  );
+
+  if (todayCompletedDrillTasks.length === 0) return;
+
+  let repaired = false;
+
+  todayCompletedDrillTasks.forEach(completedTask => {
+    const drillId = completedTask.drillId;
+
+    // 1. 誤って active（未達成・明日の範囲）になっている同じドリルのタスクを今日から消去
+    tasks = tasks.filter(t => !(t.drillId === drillId && t.date === todayDateStr && t.status === 'active'));
+
+    // 2. 達成済みタスク（status: 'completed'）が存在しなければ今日の実績から復元
+    const existingIndex = tasks.findIndex(t => t.drillId === drillId && t.date === todayDateStr && t.status === 'completed');
+    if (existingIndex === -1) {
+      tasks.push({
+        id: completedTask.id || `drill_${drillId}_completed_${todayDateStr}`,
+        text: completedTask.text,
+        status: 'completed',
+        drillId: drillId,
+        startPage: completedTask.startPage || 0,
+        endPage: completedTask.endPage || 0,
+        startQuestion: completedTask.startQuestion || 0,
+        endQuestion: completedTask.endQuestion || 0,
+        category: completedTask.category || 'べんきょう',
+        description: completedTask.description || '',
+        date: todayDateStr,
+        completedDate: todayDateStr
+      });
+      repaired = true;
+    } else {
+      tasks[existingIndex].text = completedTask.text;
+      tasks[existingIndex].status = 'completed';
+      repaired = true;
+    }
+
+    // 3. ドリルの進捗も今日達成した実績に合わせて修復
+    const drill = drills.find(d => d.id === drillId || d.id.toString() === drillId.toString());
+    if (drill) {
+      if (completedTask.endPage > 0 && drill.totalPages > 0) {
+        drill.currentProgress = Math.min(completedTask.endPage, drill.totalPages);
+      }
+      if (completedTask.endQuestion > 0 && drill.totalQuestions > 0) {
+        drill.currentQuestionProgress = Math.min(completedTask.endQuestion, drill.totalQuestions);
+      }
+    }
+  });
+
+  if (repaired) {
+    saveTasks();
+    saveDrills();
+    console.log("[Data Repair] 今日の実績をもとに「今日のすること」を達成ステータスへ自動修復しました。");
+  }
+}
+
 // 今日のタスクを自動生成
 function generateDailyTasks(isNewDay = false) {
+  repairTodayCompletedTasks();
   const todayDay = getTodayDayName();
   const todayDateStr = getTodayDateString();
   const todaySchedules = gameState.weeklySchedules.filter(s => s.days.includes(todayDay));
