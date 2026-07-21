@@ -1028,6 +1028,36 @@ function repairTodayCompletedTasks() {
     }
   });
 
+  // ドリル以外のすべての完了実績（ピアノレッスン等の予定タスク）も「今日のすること」画面へ完了同期
+  const todayCompletedCustomTasks = completedTasks.filter(t => 
+    (t.completedDate === todayDateStr || t.date === todayDateStr)
+  );
+
+  todayCompletedCustomTasks.forEach(completedTask => {
+    const cleanName = completedTask.text ? completedTask.text.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim() : "";
+    if (!cleanName) return;
+
+    // 同名の未達成（active）タスクが残っていれば消去
+    tasks = tasks.filter(t => !(t.text && t.text.includes(cleanName) && t.date === todayDateStr && t.status === 'active'));
+
+    const existIndex = tasks.findIndex(t => 
+      (t.id === completedTask.id || (t.text && t.text.includes(cleanName))) && 
+      t.date === todayDateStr
+    );
+
+    if (existIndex !== -1) {
+      tasks[existIndex].status = 'completed';
+      repaired = true;
+    } else {
+      tasks.push({
+        ...completedTask,
+        status: 'completed',
+        date: todayDateStr
+      });
+      repaired = true;
+    }
+  });
+
   if (repaired) {
     saveTasks();
     saveDrills();
@@ -1205,14 +1235,29 @@ function generateDailyTasks(isNewDay = false) {
       }
       drill.postponedAmount = 0;
     } else {
-      // 2. 通常の予定
+      // 2. 通常の予定（ピアノレッスン等）
       const weeklyTaskId = `weekly_${schedule.id}_${todayDateStr}`;
+
+      // 今日すでに完了（completed）している予定がある場合、未達成タスクを新しく生成しない！
+      const isScheduleCompletedToday = tasks.some(t => 
+        (t.id === weeklyTaskId || (t.text && t.text.includes(schedule.name))) && 
+        t.date === todayDateStr && 
+        t.status === 'completed'
+      ) || (completedTasks && completedTasks.some(t => 
+        (t.text && t.text.includes(schedule.name)) && 
+        (t.completedDate === todayDateStr || t.date === todayDateStr)
+      ));
+
+      if (isScheduleCompletedToday) {
+        return;
+      }
+
       const existsAsReplaced = tasks.some(t => t.id && t.id.toString().startsWith(`weekly_${schedule.id}`) && t.postponeMode === 'replace');
       if (existsAsReplaced) return;
 
       activeWeeklyTaskIdsToday.add(weeklyTaskId);
 
-      const exist = tasks.some(t => t.id === weeklyTaskId && t.date === todayDateStr);
+      const exist = tasks.some(t => (t.id === weeklyTaskId || (t.text && t.text.includes(schedule.name))) && t.date === todayDateStr);
       if (!exist) {
         tasks.push({
           id: weeklyTaskId,
