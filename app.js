@@ -914,51 +914,58 @@ function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
   let repaired = false;
 
-  // 【強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を逆算して救出・修復！
+  // 【超強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を完全に無条件救出！
   if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
     gameState.mistakeRecords.forEach(mistake => {
       if (!mistake.drillName) return;
-      
-      const matchedDrill = drills.find(d => d.name === mistake.drillName || d.name.includes(mistake.drillName) || mistake.drillName.includes(d.name));
-      if (!matchedDrill) return;
 
+      const matchedDrill = drills.find(d => 
+        d.name === mistake.drillName || 
+        d.name.includes(mistake.drillName) || 
+        mistake.drillName.includes(d.name) ||
+        (d.name && mistake.drillName && d.name.replace(/\s+/g, '') === mistake.drillName.replace(/\s+/g, ''))
+      );
+
+      const drillNameStr = matchedDrill ? matchedDrill.name : mistake.drillName;
+      const drillIdVal = matchedDrill ? matchedDrill.id : `restored_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+      const categoryVal = matchedDrill ? matchedDrill.category : "べんきょう";
       const mistakeDate = mistake.date || todayDateStr;
 
       const hasCompleted = completedTasks.some(t => 
-        (t.drillId === matchedDrill.id || (t.text && t.text.includes(matchedDrill.name))) && 
-        t.completedDate === mistakeDate
+        (t.text && t.text.includes(drillNameStr)) && 
+        (t.completedDate === mistakeDate || t.date === mistakeDate)
       );
 
       if (!hasCompleted) {
-        const emoji = getCategoryEmoji(matchedDrill.category);
-        const startP = matchedDrill.startPage || 1;
-        const endP = matchedDrill.currentProgress > 0 ? matchedDrill.currentProgress : (startP + (matchedDrill.dailyAmount || 1) - 1);
-        const taskText = `${emoji} ${matchedDrill.category}：${matchedDrill.name}（P:${startP}〜${endP}）`;
+        const emoji = getCategoryEmoji(categoryVal);
+        const startP = matchedDrill ? (matchedDrill.startPage || 1) : 1;
+        const endP = matchedDrill && matchedDrill.currentProgress > 0 ? matchedDrill.currentProgress : (startP + (matchedDrill ? (matchedDrill.dailyAmount || 1) : 1) - 1);
+        const taskText = `${emoji} ${categoryVal}：${drillNameStr}（P:${startP}〜${endP}）`;
 
         const restoredTask = {
-          id: `drill_${matchedDrill.id}_restored_${mistakeDate}`,
+          id: `drill_${drillIdVal}_restored_${mistakeDate}`,
           text: taskText,
           status: 'completed',
-          drillId: matchedDrill.id,
+          drillId: drillIdVal,
           startPage: startP,
           endPage: endP,
-          category: matchedDrill.category || 'べんきょう',
-          description: matchedDrill.description || '',
+          category: categoryVal,
+          description: '',
           date: mistakeDate,
           completedDate: mistakeDate
         };
 
         completedTasks.push(restoredTask);
         
-        const hasHistory = history.some(h => h.taskText && h.taskText.includes(matchedDrill.name) && h.date === mistakeDate);
+        const hasHistory = history.some(h => h.taskText && h.taskText.includes(drillNameStr) && h.date === mistakeDate);
         if (!hasHistory) {
           history.push({
             id: restoredTask.id,
             date: mistakeDate,
             taskText: taskText,
             type: 'drill',
-            amount: matchedDrill.dailyAmount || 1,
-            unit: matchedDrill.unit || 'ページ'
+            amount: matchedDrill ? (matchedDrill.dailyAmount || 1) : 1,
+            unit: matchedDrill ? (matchedDrill.unit || 'ページ') : 'ページ'
           });
         }
         repaired = true;
@@ -4221,6 +4228,7 @@ function escapeHTML(str) {
 
 // がんばり記録画面のレンダリング
 function renderRecordTab() {
+  repairTodayCompletedTasks();
   const clearedTasksCountEl = document.getElementById('cleared-tasks-count');
   const studyTimeCountEl = document.getElementById('study-time-count');
   const recordDrillListEl = document.getElementById('record-drill-list');
