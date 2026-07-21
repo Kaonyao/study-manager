@@ -203,6 +203,7 @@ function setupAuthObserver() {
       try {
         gameState.simulationMode = false;
         checkDateChange();
+        repairTodayCompletedTasks();
         generateDailyTasks();
         renderTasks();
         renderNigateBuster();
@@ -909,41 +910,10 @@ function getTodayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
-// 今日の実績データ（および間違いメモ）から「今日のすること」「カレンダー」「がんばり実績」を完全自動修復
+// 今日の実績データ（および間違いメモ）から「今日のすること」「カレンダー」「がんばり実績」を完全自動修復・多端末同期
 function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
   let repaired = false;
-
-  // 【ユーザーご要望によるリセット】今日のタスクを「算数ラボ7級　ステージ１（Q:25〜26）」の未達成状態に戻す
-  const matchedSansuDrill = drills.find(d => d.name && (d.name.includes("算数ラボ") || d.name.includes("ラボ")));
-  const drillIdVal = matchedSansuDrill ? matchedSansuDrill.id : 12345;
-  const sansuLabTaskText = "📚 べんきょう：算数ラボ7級　ステージ１（Q:25〜26）";
-
-  // 今日のタスクから算数ラボをクリアして、「Q:25〜26」の未達成タスクとして配置
-  if (tasks) {
-    tasks = tasks.filter(t => !(t.text && t.text.includes("算数ラボ") && t.date === todayDateStr));
-    tasks.push({
-      id: `drill_${drillIdVal}_active_${todayDateStr}`,
-      text: sansuLabTaskText,
-      status: 'active',
-      drillId: drillIdVal,
-      startQuestion: 25,
-      endQuestion: 26,
-      category: 'べんきょう',
-      description: 'ステージ１',
-      date: todayDateStr
-    });
-  }
-
-  // 算数ラボのドリル進捗を Q:24（開始問: 25）にセット
-  if (matchedSansuDrill) {
-    matchedSansuDrill.currentQuestionProgress = 24;
-    matchedSansuDrill.startQuestion = 25;
-    saveDrills();
-  }
-
-  saveTasks();
-  if (firebaseEnabled && currentFirebaseUser) saveAllDataToCloud();
 
   // 【超強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を完全に無条件救出！
   if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
