@@ -1130,7 +1130,7 @@ function repairTodayCompletedTasks() {
   // 時間割に存在する限り「active (未完了)」として強制復元するセルフヒーリング処理
   const todayDay = getTodayDayName();
   const todayDateStr = getTodayDateString();
-  const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s.days && s.days.includes(todayDay)) : [];
+  const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
 
   todaySchedules.forEach(schedule => {
     if (schedule.drillId) return; // ドリルは別の自動生成ロジックで制御されるためスキップ
@@ -1194,7 +1194,7 @@ function generateDailyTasks(isNewDay = false) {
   repairTodayCompletedTasks();
   const todayDay = getTodayDayName();
   const todayDateStr = getTodayDateString();
-  const todaySchedules = gameState.weeklySchedules.filter(s => s.days.includes(todayDay));
+  const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
 
   let updated = false;
 
