@@ -982,79 +982,63 @@ function repairTodayCompletedTasks() {
     return;
   }
 
-  const todayCompletedDrillTasks = completedTasks.filter(t => 
-    t.completedDate === todayDateStr && t.drillId !== null && t.drillId !== undefined
+  // 今日のすべての完了実績（ドリル・予定・カスタム手動など全種類）をループ処理
+  const todayCompleted = completedTasks.filter(t => 
+    t.completedDate === todayDateStr || t.date === todayDateStr
   );
 
-  todayCompletedDrillTasks.forEach(completedTask => {
-    const drillId = completedTask.drillId;
+  todayCompleted.forEach(completedTask => {
+    const cleanName = completedTask.text ? completedTask.text.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim() : "";
+    if (!cleanName) return;
 
-    // 1. 誤って active（未達成・明日の範囲）になっている同じドリルのタスクを今日から消去
-    tasks = tasks.filter(t => !(t.drillId === drillId && t.date === todayDateStr && t.status === 'active'));
+    // 1. 同名・同ID・同ドリルの未達成（active）タスクが「今日のすること」に紛れ込んでいれば完全排除
+    tasks = tasks.filter(t => {
+      const isSameDrill = completedTask.drillId && t.drillId === completedTask.drillId;
+      const isSameId = t.id === completedTask.id;
+      const tCleanName = t.text ? t.text.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim() : "";
+      const isSameName = cleanName && tCleanName && (tCleanName.includes(cleanName) || cleanName.includes(tCleanName));
+      
+      if (t.date === todayDateStr && t.status === 'active' && (isSameId || isSameDrill || isSameName)) {
+        return false;
+      }
+      return true;
+    });
 
-    // 2. 達成済みタスク（status: 'completed'）が存在しなければ今日の実績から復元
-    const existingIndex = tasks.findIndex(t => t.drillId === drillId && t.date === todayDateStr && t.status === 'completed');
+    // 2. 「今日のすること」に完了済み状態のタスクが存在するかチェック
+    const existingIndex = tasks.findIndex(t => 
+      (t.id === completedTask.id || (completedTask.drillId && t.drillId === completedTask.drillId) || (cleanName && t.text && t.text.includes(cleanName))) && 
+      t.date === todayDateStr && 
+      t.status === 'completed'
+    );
+
     if (existingIndex === -1) {
+      // 存在しなければ、実績から completed 状態でタスクを復元
       tasks.push({
-        id: completedTask.id || `drill_${drillId}_completed_${todayDateStr}`,
-        text: completedTask.text,
+        ...completedTask,
         status: 'completed',
-        drillId: drillId,
-        startPage: completedTask.startPage || 0,
-        endPage: completedTask.endPage || 0,
-        startQuestion: completedTask.startQuestion || 0,
-        endQuestion: completedTask.endQuestion || 0,
-        category: completedTask.category || 'べんきょう',
-        description: completedTask.description || '',
         date: todayDateStr,
         completedDate: todayDateStr
       });
       repaired = true;
     } else {
-      tasks[existingIndex].text = completedTask.text;
-      tasks[existingIndex].status = 'completed';
-      repaired = true;
-    }
-
-    // 3. ドリルの進捗も今日達成した実績に合わせて修復
-    const drill = drills.find(d => d.id === drillId || d.id.toString() === drillId.toString());
-    if (drill) {
-      if (completedTask.endPage > 0 && drill.totalPages > 0) {
-        drill.currentProgress = Math.min(completedTask.endPage, drill.totalPages);
-      }
-      if (completedTask.endQuestion > 0 && drill.totalQuestions > 0) {
-        drill.currentQuestionProgress = Math.min(completedTask.endQuestion, drill.totalQuestions);
+      // 存在すれば、確実に 'completed' にステータスを維持
+      if (tasks[existingIndex].status !== 'completed') {
+        tasks[existingIndex].status = 'completed';
+        repaired = true;
       }
     }
-  });
 
-  // ドリル以外のすべての完了実績（ピアノレッスン等の予定タスク）も「今日のすること」画面へ完了同期
-  const todayCompletedCustomTasks = completedTasks.filter(t => 
-    (t.completedDate === todayDateStr || t.date === todayDateStr)
-  );
-
-  todayCompletedCustomTasks.forEach(completedTask => {
-    const cleanName = completedTask.text ? completedTask.text.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim() : "";
-    if (!cleanName) return;
-
-    // 同名の未達成（active）タスクが残っていれば消去
-    tasks = tasks.filter(t => !(t.text && t.text.includes(cleanName) && t.date === todayDateStr && t.status === 'active'));
-
-    const existIndex = tasks.findIndex(t => 
-      (t.id === completedTask.id || (t.text && t.text.includes(cleanName))) && 
-      t.date === todayDateStr
-    );
-
-    if (existIndex !== -1) {
-      tasks[existIndex].status = 'completed';
-      repaired = true;
-    } else {
-      tasks.push({
-        ...completedTask,
-        status: 'completed',
-        date: todayDateStr
-      });
-      repaired = true;
+    // 3. ドリルタスクの場合は、進捗が戻ってしまっていたら完了実績に合わせて修復
+    if (completedTask.drillId) {
+      const drill = drills.find(d => d.id === completedTask.drillId || d.id.toString() === completedTask.drillId.toString());
+      if (drill) {
+        if (completedTask.endPage > 0 && drill.totalPages > 0) {
+          drill.currentProgress = Math.max(drill.currentProgress || 0, completedTask.endPage);
+        }
+        if (completedTask.endQuestion > 0 && drill.totalQuestions > 0) {
+          drill.currentQuestionProgress = Math.max(drill.currentQuestionProgress || 0, completedTask.endQuestion);
+        }
+      }
     }
   });
 
