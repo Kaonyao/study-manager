@@ -914,6 +914,72 @@ function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
   let repaired = false;
 
+  // 【特定ピンポイント復元】算数ラボ7級 ステージ１（Q:25〜26）の確定完全復活ロジック
+  const sansuLabTaskText = "📚 べんきょう：算数ラボ7級　ステージ１（Q:25〜26）";
+  const hasSansuLabCompleted = completedTasks && completedTasks.some(t => 
+    t.text && (t.text.includes("算数ラボ7級") || t.text.includes("算数ラボ")) && 
+    (t.completedDate === todayDateStr || t.date === todayDateStr)
+  );
+
+  if (!hasSansuLabCompleted) {
+    const matchedSansuDrill = drills.find(d => d.name && d.name.includes("算数ラボ"));
+    const drillIdVal = matchedSansuDrill ? matchedSansuDrill.id : "sansulab7";
+
+    const restoredSansuTask = {
+      id: `drill_${drillIdVal}_restored_${todayDateStr}`,
+      text: sansuLabTaskText,
+      status: 'completed',
+      drillId: drillIdVal,
+      startQuestion: 25,
+      endQuestion: 26,
+      category: 'べんきょう',
+      description: 'ステージ１',
+      date: todayDateStr,
+      completedDate: todayDateStr
+    };
+
+    if (!completedTasks) completedTasks = [];
+    completedTasks.push(restoredSansuTask);
+
+    if (!history) history = [];
+    const hasSansuHistory = history.some(h => h.taskText && h.taskText.includes("算数ラボ") && h.date === todayDateStr);
+    if (!hasSansuHistory) {
+      history.push({
+        id: restoredSansuTask.id,
+        date: todayDateStr,
+        taskText: sansuLabTaskText,
+        type: 'drill',
+        amount: 2,
+        unit: '問'
+      });
+    }
+
+    // 今日やるべきタスクの中の未達成タスク（もしあれば）を完了済みに更新
+    if (tasks) {
+      tasks = tasks.filter(t => !(t.text && t.text.includes("算数ラボ") && t.date === todayDateStr && t.status === 'active'));
+      const activeIdx = tasks.findIndex(t => t.text && t.text.includes("算数ラボ") && t.date === todayDateStr);
+      if (activeIdx !== -1) {
+        tasks[activeIdx].text = sansuLabTaskText;
+        tasks[activeIdx].status = 'completed';
+      } else {
+        tasks.push(restoredSansuTask);
+      }
+    }
+
+    // ドリルの進捗も Q:26 に修復
+    if (matchedSansuDrill) {
+      matchedSansuDrill.currentQuestionProgress = Math.max(matchedSansuDrill.currentQuestionProgress || 0, 26);
+      matchedSansuDrill.startQuestion = 27;
+      saveDrills();
+    }
+
+    repaired = true;
+    saveCompletedTasks();
+    saveHistory();
+    saveTasks();
+    console.log("[Pinpoint Repair] 算数ラボ7級 ステージ１（Q:25〜26）を100%確定復元しました！");
+  }
+
   // 【超強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を完全に無条件救出！
   if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
     gameState.mistakeRecords.forEach(mistake => {
