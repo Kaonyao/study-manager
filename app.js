@@ -909,18 +909,74 @@ function getTodayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
-// 今日の実績データから「今日のすること」のタスクステータスと範囲を自動修復
+// 今日の実績データ（および間違いメモ）から「今日のすること」「カレンダー」「がんばり実績」を完全自動修復
 function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
-  if (!completedTasks || completedTasks.length === 0) return;
+  let repaired = false;
+
+  // 【強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を逆算して救出・修復！
+  if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
+    gameState.mistakeRecords.forEach(mistake => {
+      if (!mistake.drillName) return;
+      
+      const matchedDrill = drills.find(d => d.name === mistake.drillName || d.name.includes(mistake.drillName) || mistake.drillName.includes(d.name));
+      if (!matchedDrill) return;
+
+      const mistakeDate = mistake.date || todayDateStr;
+
+      const hasCompleted = completedTasks.some(t => 
+        (t.drillId === matchedDrill.id || (t.text && t.text.includes(matchedDrill.name))) && 
+        t.completedDate === mistakeDate
+      );
+
+      if (!hasCompleted) {
+        const emoji = getCategoryEmoji(matchedDrill.category);
+        const startP = matchedDrill.startPage || 1;
+        const endP = matchedDrill.currentProgress > 0 ? matchedDrill.currentProgress : (startP + (matchedDrill.dailyAmount || 1) - 1);
+        const taskText = `${emoji} ${matchedDrill.category}：${matchedDrill.name}（P:${startP}〜${endP}）`;
+
+        const restoredTask = {
+          id: `drill_${matchedDrill.id}_restored_${mistakeDate}`,
+          text: taskText,
+          status: 'completed',
+          drillId: matchedDrill.id,
+          startPage: startP,
+          endPage: endP,
+          category: matchedDrill.category || 'べんきょう',
+          description: matchedDrill.description || '',
+          date: mistakeDate,
+          completedDate: mistakeDate
+        };
+
+        completedTasks.push(restoredTask);
+        
+        const hasHistory = history.some(h => h.taskText && h.taskText.includes(matchedDrill.name) && h.date === mistakeDate);
+        if (!hasHistory) {
+          history.push({
+            id: restoredTask.id,
+            date: mistakeDate,
+            taskText: taskText,
+            type: 'drill',
+            amount: matchedDrill.dailyAmount || 1,
+            unit: matchedDrill.unit || 'ページ'
+          });
+        }
+        repaired = true;
+      }
+    });
+  }
+
+  if (!completedTasks || completedTasks.length === 0) {
+    if (repaired) {
+      saveCompletedTasks();
+      saveHistory();
+    }
+    return;
+  }
 
   const todayCompletedDrillTasks = completedTasks.filter(t => 
     t.completedDate === todayDateStr && t.drillId !== null && t.drillId !== undefined
   );
-
-  if (todayCompletedDrillTasks.length === 0) return;
-
-  let repaired = false;
 
   todayCompletedDrillTasks.forEach(completedTask => {
     const drillId = completedTask.drillId;
@@ -967,7 +1023,9 @@ function repairTodayCompletedTasks() {
   if (repaired) {
     saveTasks();
     saveDrills();
-    console.log("[Data Repair] 今日の実績をもとに「今日のすること」を達成ステータスへ自動修復しました。");
+    saveCompletedTasks();
+    saveHistory();
+    console.log("[Data Repair] 間違いメモから算数ラボ等の実績・カレンダー・今日のする事を完全復元しました。");
   }
 }
 
