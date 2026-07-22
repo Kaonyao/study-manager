@@ -167,6 +167,12 @@ function init() {
   } catch (e) {
     console.error("renderSettingsTab failed in init:", e);
   }
+
+  try {
+    renderEmergencyRescuePanel();
+  } catch (e) {
+    console.error("renderEmergencyRescuePanel failed in init:", e);
+  }
 }
 
 // 従来のローカルモードでの初期化
@@ -296,6 +302,12 @@ function setupAuthObserver() {
         }
       } catch (e) {
         console.error("renderCalendar failed after cloud load:", e);
+      }
+
+      try {
+        renderEmergencyRescuePanel();
+      } catch (e) {
+        console.error("renderEmergencyRescuePanel failed after cloud load:", e);
       }
     } else {
       currentFirebaseUser = null;
@@ -4925,6 +4937,133 @@ function showGameToast(message, icon = '🔔') {
       toast.remove();
     }, 300);
   }, 3000);
+}
+
+// 🛠️ 緊急データ復旧・救出パネルの描画処理
+function renderEmergencyRescuePanel() {
+  const panelEl = document.getElementById('emergency-rescue-panel');
+  const infoEl = document.getElementById('rescue-status-info');
+  const actionsEl = document.getElementById('rescue-actions-list');
+  if (!panelEl || !infoEl || !actionsEl) return;
+
+  // 1. 現在のログイン状況を取得
+  let loginInfoText = "";
+  if (firebaseEnabled && currentFirebaseUser) {
+    loginInfoText = `🟢 ログイン中: <b>${currentFirebaseUser.email || "メールなし"}</b><br>UID: <span style="font-size:0.65rem;">${currentFirebaseUser.uid}</span>`;
+  } else {
+    loginInfoText = `🔴 ログアウト状態 (ローカルモード)<br>※オンライン同期するにはログインしてください。`;
+  }
+
+  // 2. LocalStorage内に保存されているユーザーデータを全スキャン
+  const foundUsers = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("study_rpg_u_") && key.endsWith("_drills")) {
+        const userName = key.substring("study_rpg_u_".length, key.length - "_drills".length);
+        const dataStr = localStorage.getItem(key);
+        if (dataStr) {
+          const parsed = JSON.parse(dataStr);
+          if (parsed && parsed.length > 0) {
+            // 他のデータキーも確認して統計を取得
+            const tasksStr = localStorage.getItem(`study_rpg_u_${userName}_tasks`);
+            const tasksCount = tasksStr ? (JSON.parse(tasksStr) || []).length : 0;
+            const completedTasksStr = localStorage.getItem(`study_rpg_u_${userName}_completed_tasks`);
+            const completedCount = completedTasksStr ? (JSON.parse(completedTasksStr) || []).length : 0;
+
+            foundUsers.push({
+              name: userName,
+              drillsCount: parsed.length,
+              tasksCount: tasksCount,
+              completedCount: completedCount
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("LocalStorage scan error:", err);
+  }
+
+  // 検出されたローカルデータの表示
+  let rescueTargetHtml = "";
+  if (foundUsers.length > 0) {
+    rescueTargetHtml = `<br><br>📦 <b>検出されたPC内データ:</b><br>`;
+    foundUsers.forEach(u => {
+      rescueTargetHtml += `・ <b>${u.name}</b> (ドリル:${u.drillsCount}件, 未完了タスク:${u.tasksCount}件, 完了実績:${u.completedCount}件)<br>`;
+    });
+    panelEl.style.display = 'block'; // ローカルデータが見つかれば強制表示！
+  } else {
+    rescueTargetHtml = `<br><br>⚠️ パソコン内に以前の子供ユーザー（たろう等）のドリルデータが見つかりませんでした。すでに初期化されたか別のアカウントで上書きされた可能性があります。`;
+    // 何もデータがないがログインしている場合、ユーザーの不安を解消するためにパネルは表示する
+    if (firebaseEnabled && currentFirebaseUser) {
+      panelEl.style.display = 'block';
+    }
+  }
+
+  infoEl.innerHTML = loginInfoText + rescueTargetHtml;
+
+  // 3. 復旧アクションボタンの作成
+  actionsEl.innerHTML = "";
+  if (foundUsers.length > 0) {
+    foundUsers.forEach(u => {
+      const btn = document.createElement('button');
+      btn.type = "button";
+      btn.style.cssText = "width:100%; padding:8px; font-size:0.75rem; background-color:#8e78f9; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); margin-top:4px;";
+      btn.textContent = `⚡ 「${u.name}」のデータでクラウドを上書き復旧する`;
+      
+      btn.addEventListener('click', async () => {
+        const confirmRestore = confirm(
+          `本当に「${u.name}」のデータでオンラインデータを上書きして復活させますか？\n\n※現在オンライン上にある空のデータは上書き消去されます。`
+        );
+        if (confirmRestore) {
+          try {
+            // アカウントに関連付けるアクティブユーザーをセット
+            gameState.currentUser = u.name;
+            storage.setItem('study_rpg_current_user', u.name);
+            
+            if (!gameState.users.includes(u.name)) {
+              gameState.users.push(u.name);
+              storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
+            }
+
+            // メモリへロード
+            loadData();
+
+            // クラウドへ強制アップロード
+            if (firebaseEnabled && currentFirebaseUser) {
+              showGameToast("オンラインへアップロード中...", "☁️");
+              await saveAllDataToCloud();
+              saveLocalBackup();
+              alert(`💮「${u.name}」のデータをオンライン上に完全復旧しました！\n\niPad側でも同じメールアドレスでログイン（またはリロード）すると、データが自動で反映されます。`);
+              window.location.reload();
+            } else {
+              alert("⚠️ オンラインに接続されていないか、ログインしていません。ログイン後に再度実行してください。");
+            }
+          } catch (err) {
+            alert("エラーが発生しました: " + err.message);
+          }
+        }
+      });
+      actionsEl.appendChild(btn);
+    });
+  }
+
+  // 強制ログアウトボタン（別アカウントでのログインをやり直させるため）
+  if (firebaseEnabled && currentFirebaseUser) {
+    const btnLogout = document.createElement('button');
+    btnLogout.type = "button";
+    btnLogout.style.cssText = "width:100%; padding:6px; font-size:0.7rem; background-color:#e03131; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:4px;";
+    btnLogout.textContent = "🚪 ログアウトして、別のアドレスでログインし直す";
+    btnLogout.addEventListener('click', () => {
+      if (confirm("ログアウトしてログイン画面に戻りますか？")) {
+        authInstance.signOut().then(() => {
+          window.location.reload();
+        });
+      }
+    });
+    actionsEl.appendChild(btnLogout);
+  }
 }
 
 // 実行！
