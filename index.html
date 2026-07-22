@@ -711,13 +711,23 @@
   <!-- Firebase 設定の読み込み -->
   <script src="firebase-config.js"></script>
 
-  <!-- サービスワーカーの登録スクリプト -->
+  <!-- サービスワーカーの解除スクリプト（古いキャッシュによるフリーズ・巻き戻り防止） -->
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('service-worker.js')
-          .then(reg => console.log('[PWA] ServiceWorker registered:', reg.scope))
-          .catch(err => console.error('[PWA] ServiceWorker registration failed:', err));
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+          console.log('[PWA] Unregistered old ServiceWorker');
+        }
+      });
+    }
+    // キャッシュストレージも強制クリーンアップ
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+          console.log('[PWA] Cleared CacheStorage:', name);
+        }
       });
     }
   </script>
