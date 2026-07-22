@@ -30,23 +30,6 @@
   <!-- 画面中央 of メインコンテナ -->
   <div class="phone-container">
     
-    <!-- 緊急データ復旧・救出パネル (緊急表示用) -->
-    <div id="emergency-rescue-panel" style="display: none; margin: 10px; padding: 12px; background-color: #fff9db; border: 2px dashed #f59f00; border-radius: 8px; font-family: 'Noto Sans JP', sans-serif; text-align: left; box-shadow: 0 4px 6px rgba(0,0,0,0.05); z-index: 9999; position: relative;">
-      <h3 style="margin: 0 0 8px 0; font-size: 0.9rem; color: #f59f00; display: flex; align-items: center; gap: 6px;">
-        🛠️ データ救出・復旧アシスタント
-      </h3>
-      <p style="margin: 0 0 8px 0; font-size: 0.75rem; color: #495057; line-height: 1.4;">
-        パソコン内に以前のデータが残っている場合、ここから強制的に引き継いで復活させることができます。
-      </p>
-      <div id="rescue-status-info" style="font-size: 0.75rem; color: #495057; margin-bottom: 8px; padding: 6px; background-color: #f8f9fa; border-radius: 4px; word-break: break-all; line-height: 1.5;">
-        <!-- ログイン中のアドレスやUID、および検出されたローカルデータが表示されます -->
-      </div>
-      <div id="rescue-actions-list" style="display: flex; flex-direction: column; gap: 6px;">
-        <!-- 復旧アクションボタンが動的に並びます -->
-      </div>
-      <button type="button" onclick="document.getElementById('emergency-rescue-panel').style.display='none';" style="width: 100%; margin-top: 8px; padding: 4px; font-size: 0.7rem; background: #e9ecef; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">閉じる</button>
-    </div>
-
     <!-- 1. ヘッダー：ユーザー情報、日付、タスク進捗率 -->
     <header class="app-header">
       <div class="header-top">
