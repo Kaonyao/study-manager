@@ -1909,7 +1909,15 @@ function renderTasks() {
   }
 
   const todayDateStr = getTodayDateString();
-  const tasksToRender = gameState.simulationMode ? getTomorrowSimulatedTasks() : tasks.filter(t => (!t.date || t.date === todayDateStr) && t.status !== 'deleted');
+  const tomorrowDateStr = getTomorrowDateString();
+  const tasksToRender = gameState.simulationMode 
+    ? getTomorrowSimulatedTasks() 
+    : tasks.filter(t => {
+        if (t.status === 'deleted') return false;
+        const isToday = !t.date || t.date === todayDateStr;
+        const isPostponedToday = t.status === 'postponed' && t.date === tomorrowDateStr;
+        return isToday || isPostponedToday;
+      });
   
   tasksToRender.forEach(task => {
     if (currentCategoryFilter !== 'all' && task.category !== currentCategoryFilter) {
