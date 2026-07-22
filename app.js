@@ -361,6 +361,62 @@ async function loadCloudData() {
       const data = doc.data();
       console.log("[Firestore] Loaded cloud data:", data);
 
+      // 【超強力な自動ローカルデータ救出エンジン】
+      // ログイン完了後、現在のクラウドデータが空（ドリルが0件）の場合、
+      // ログイン中のアカウント（UID）のキーに関わらず、このPCのLocalStorageに過去に保存された
+      // 「ドリルが1件以上登録されているユーザーデータ（例: study_rpg_u_たろう_drills）」を
+      // 強制スキャンして見つけ出し、移行（引き継ぎ）を提案します。
+      try {
+        const cloudDrillsCount = data.drills ? data.drills.length : 0;
+        if (cloudDrillsCount === 0) {
+          let foundUser = null;
+          let foundDrills = null;
+          
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("study_rpg_u_") && key.endsWith("_drills")) {
+              const userName = key.substring("study_rpg_u_".length, key.length - "_drills".length);
+              if (userName !== "ユーザー" && userName !== "ゆうしゃ") {
+                const localDataStr = localStorage.getItem(key);
+                if (localDataStr && localDataStr !== '[]') {
+                  const parsedDrills = JSON.parse(localDataStr);
+                  if (parsedDrills && parsedDrills.length > 0) {
+                    foundUser = userName;
+                    foundDrills = parsedDrills;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          
+          if (foundUser && foundDrills) {
+            const confirmRescue = confirm(
+              `このパソコン内に、以前使用していた「${foundUser}」の大切な学習データが見つかりました！\n\nこのデータを現在ログイン中のアカウントに引き継いで、オンライン上に復活させますか？\n（『はい』を選ぶと、データが完全に復旧します）`
+            );
+            if (confirmRescue) {
+              gameState.currentUser = foundUser;
+              storage.setItem('study_rpg_current_user', foundUser);
+              
+              if (!gameState.users.includes(foundUser)) {
+                gameState.users.push(foundUser);
+                storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
+              }
+              
+              loadData();
+              await saveAllDataToCloud();
+              saveLocalBackup();
+              showGameToast("データを復活させました！☁️", "💮");
+              
+              window.location.reload();
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[Data Rescue System Error]", err);
+      }
+
       // 【強力な安全装置】
       // クラウドのデータが空（ドリルが0件）であり、かつローカルに既に学習データがある場合、
       // クラウドの空データでローカルを破壊するのを防ぐため、ローカルからクラウドへの移行確認を行います。
