@@ -1252,10 +1252,14 @@ function repairTodayCompletedTasks() {
           });
 
           if (existingIdx !== -1) {
-            tasks[existingIdx].status = 'active';
-            tasks[existingIdx].id = weeklyTaskId; // IDも整合
-            tasks[existingIdx].text = schedule.name || schedName;
-            repaired = true;
+            // 【重要バグ修正】ユーザーが今日削除した(deleted)予定は、修復エンジンで強制復活させない！
+            // 延期(postponed)されたタスクのみをactiveに修復します。
+            if (tasks[existingIdx].status === 'postponed') {
+              tasks[existingIdx].status = 'active';
+              tasks[existingIdx].id = weeklyTaskId; // IDも整合
+              tasks[existingIdx].text = schedule.name || schedName;
+              repaired = true;
+            }
           } else {
             // 全く存在しなければ新規追加
             tasks.push({
