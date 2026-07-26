@@ -1236,29 +1236,35 @@ function repairTodayCompletedTasks() {
         });
         if (isCompleted) return; // 完了していれば復活させない
 
-        // 現在の今日のタスクに、未完了(active) または 完了(completed) として存在しているか？
-        const hasActiveOrCompleted = Array.isArray(tasks) && tasks.some(t => {
+        const tomorrowDateStr = getTomorrowDateString();
+
+        // 現在の今日のタスクに、未完了(active)、完了(completed)、または延期(postponed) として存在しているか？
+        const hasActiveCompletedOrPostponed = Array.isArray(tasks) && tasks.some(t => {
           try {
             if (!t) return false;
             const tText = String(t.text || "").trim();
             const tId = String(t.id || "");
-            return (tId === weeklyTaskId || tText === schedName) && 
-                   t.date === todayDateStr && 
-                   (t.status === 'active' || t.status === 'completed');
+            const isMatch = tId === weeklyTaskId || tText === schedName;
+            
+            // 今日の active/completed、または今日延期して日付が明日になっている postponed タスク
+            const isTodayActiveOrCompleted = t.date === todayDateStr && (t.status === 'active' || t.status === 'completed');
+            const isPostponedForTomorrow = t.date === tomorrowDateStr && t.status === 'postponed';
+            
+            return isMatch && (isTodayActiveOrCompleted || isPostponedForTomorrow);
           } catch (e) {
             return false;
           }
         });
 
-        // 存在していない（＝削除済み status:'deleted' や 延期 status:'postponed' になってしまっている）場合
-        if (!hasActiveOrCompleted && Array.isArray(tasks)) {
+        // 存在していない（＝削除済み status:'deleted' になっている）場合
+        if (!hasActiveCompletedOrPostponed && Array.isArray(tasks)) {
           // もしすでに tasks 内に 'deleted' や 'postponed' のタスクがあれば、ステータスを 'active' に修復して復活！
           const existingIdx = tasks.findIndex(t => {
             try {
               if (!t) return false;
               const tText = String(t.text || "").trim();
               const tId = String(t.id || "");
-              return (tId === weeklyTaskId || tText === schedName) && t.date === todayDateStr;
+              return (tId === weeklyTaskId || tText === schedName) && (t.date === todayDateStr || t.date === tomorrowDateStr);
             } catch (e) {
               return false;
             }
