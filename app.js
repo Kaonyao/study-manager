@@ -1436,7 +1436,11 @@ function generateDailyTasks(isNewDay = false) {
 
       taskText += timingSuffix;
 
-      const existIndex = tasks.findIndex(t => t.drillId === drill.id && t.date === todayDateStr);
+      const tomorrowDateStr = getTomorrowDateString();
+      const existIndex = tasks.findIndex(t => 
+        t.drillId === drill.id && 
+        (t.date === todayDateStr || (t.date === tomorrowDateStr && t.status === 'postponed'))
+      );
       if (existIndex === -1) {
         tasks.push({
           id: drillTaskId,
@@ -1494,7 +1498,10 @@ function generateDailyTasks(isNewDay = false) {
 
       activeWeeklyTaskIdsToday.add(weeklyTaskId);
 
-      const exist = tasks.some(t => (t.id === weeklyTaskId || (t.text && t.text.trim() === schedule.name.trim())) && t.date === todayDateStr);
+      const exist = tasks.some(t => 
+        (t.id === weeklyTaskId || (t.text && t.text.trim() === schedule.name.trim())) && 
+        (t.date === todayDateStr || (t.date === tomorrowDateStr && t.status === 'postponed'))
+      );
       if (!exist) {
         tasks.push({
           id: weeklyTaskId,
