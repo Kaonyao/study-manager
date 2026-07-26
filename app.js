@@ -1061,6 +1061,19 @@ function getTodayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
+// タスクID（weekly_weekly_s_xxx_YYYY-MM-DDなど）から元の時間割予定IDを安全に復元するヘルパー
+function getScheduleIdFromTaskId(taskId) {
+  if (!taskId) return "";
+  const idStr = taskId.toString();
+  if (!idStr.startsWith('weekly_')) return "";
+  let scheduleId = idStr.substring(7); // 先頭の "weekly_" を削除
+  const lastUnderscore = scheduleId.lastIndexOf('_');
+  if (lastUnderscore !== -1) {
+    scheduleId = scheduleId.substring(0, lastUnderscore); // 末尾の "_YYYY-MM-DD" を削除
+  }
+  return scheduleId;
+}
+
 // 今日の実績データ（および間違いメモ）から「今日のすること」「カレンダー」「がんばり実績」を完全自動修復・多端末同期
 function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
@@ -1602,8 +1615,8 @@ function removeCompletedTask(task) {
       }
       
       if (task.id && task.id.toString().startsWith('weekly_') && t.id && t.id.toString().startsWith('weekly_')) {
-        const taskScheduleId = task.id.toString().split('_')[1];
-        const tScheduleId = t.id.toString().split('_')[1];
+        const taskScheduleId = getScheduleIdFromTaskId(task.id);
+        const tScheduleId = getScheduleIdFromTaskId(t.id);
         if (taskScheduleId && taskScheduleId === tScheduleId) {
           return false;
         }
@@ -4236,7 +4249,7 @@ function getTomorrowSimulatedTasks() {
       }
     } else if (postponed.id && postponed.id.toString().startsWith('weekly_')) {
       const mode = postponed.postponeMode || 'add';
-      const scheduleId = postponed.id.split('_')[1];
+      const scheduleId = getScheduleIdFromTaskId(postponed.id);
       const tomorrowSchedule = tomorrowSchedules.find(s => s.id === scheduleId);
       
       if (tomorrowSchedule && mode === 'replace') {
