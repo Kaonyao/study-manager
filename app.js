@@ -1252,14 +1252,8 @@ function repairTodayCompletedTasks() {
           });
 
           if (existingIdx !== -1) {
-            // 【重要バグ修正】ユーザーが今日削除した(deleted)予定は、修復エンジンで強制復活させない！
-            // 延期(postponed)されたタスクのみをactiveに修復します。
-            if (tasks[existingIdx].status === 'postponed') {
-              tasks[existingIdx].status = 'active';
-              tasks[existingIdx].id = weeklyTaskId; // IDも整合
-              tasks[existingIdx].text = schedule.name || schedName;
-              repaired = true;
-            }
+            // 既にタスクが存在している場合（ユーザーが意図的に削除[deleted]または延期[postponed]にしている場合）、
+            // 自動修復エンジンで勝手に active (未完了) に戻して復活させないようにします。
           } else {
             // 全く存在しなければ新規追加
             tasks.push({
@@ -1913,15 +1907,9 @@ function renderTasks() {
   }
 
   const todayDateStr = getTodayDateString();
-  const tomorrowDateStr = getTomorrowDateString();
   const tasksToRender = gameState.simulationMode 
     ? getTomorrowSimulatedTasks() 
-    : tasks.filter(t => {
-        if (t.status === 'deleted') return false;
-        const isToday = !t.date || t.date === todayDateStr;
-        const isPostponedToday = t.status === 'postponed' && t.date === tomorrowDateStr;
-        return isToday || isPostponedToday;
-      });
+    : tasks.filter(t => (!t.date || t.date === todayDateStr) && t.status !== 'deleted' && t.status !== 'postponed');
   
   tasksToRender.forEach(task => {
     if (currentCategoryFilter !== 'all' && task.category !== currentCategoryFilter) {
