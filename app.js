@@ -1933,9 +1933,16 @@ function renderTasks() {
   }
 
   const todayDateStr = getTodayDateString();
+  const tomorrowDateStr = getTomorrowDateString();
   const tasksToRender = gameState.simulationMode 
     ? getTomorrowSimulatedTasks() 
-    : tasks.filter(t => (!t.date || t.date === todayDateStr) && t.status !== 'deleted' && t.status !== 'postponed');
+    : tasks.filter(t => {
+        if (t.status === 'deleted') return false;
+        // 今日のタスク、または今日延期したタスク（日付が明日で、ステータスが postponed のもの）を今日のリストに含める
+        const isToday = !t.date || t.date === todayDateStr;
+        const isPostponedToday = t.status === 'postponed' && t.date === tomorrowDateStr;
+        return isToday || isPostponedToday;
+      });
   
   tasksToRender.forEach(task => {
     if (currentCategoryFilter !== 'all' && task.category !== currentCategoryFilter) {
