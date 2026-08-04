@@ -1074,6 +1074,35 @@ function getScheduleIdFromTaskId(taskId) {
   return scheduleId;
 }
 
+// タスクのテキストまたはドリル文字列から、純粋なドリル名（グループフォルダ名）を取り出すヘルパー
+function getDrillNameFromTaskText(text) {
+  if (!text) return "";
+  let name = text.trim();
+  
+  // 1. カテゴリ接頭辞 (例: "📖 べんきょう：" や "📝 しゅくだい：" など) を除去
+  const prefixIndex = name.indexOf('：');
+  if (prefixIndex !== -1) {
+    name = name.substring(prefixIndex + 1).trim();
+  }
+  
+  // 2. 末尾のかっこ (全角「（」または半角「(」) より後ろを完全に除去
+  const parenIndex1 = name.indexOf('（');
+  if (parenIndex1 !== -1) {
+    name = name.substring(0, parenIndex1).trim();
+  }
+  const parenIndex2 = name.indexOf('(');
+  if (parenIndex2 !== -1) {
+    name = name.substring(0, parenIndex2).trim();
+  }
+  
+  // 3. 予備：もし「 を 」で区切られている場合 (例: "漢字の練習 を する") は前段を抽出
+  if (name.includes(' を ')) {
+    name = name.split(' を ')[0].trim();
+  }
+  
+  return name.trim();
+}
+
 // 今日の実績データ（および間違いメモ）から「今日のすること」「カレンダー」「がんばり実績」を完全自動修復・多端末同期
 function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
@@ -3770,7 +3799,7 @@ function handleSubmitMistake(event) {
     renderTasks();
     
     const finalMistakeText = mistakeText || "べんきょう";
-    const drillName = task.text.split('：')[1] ? task.text.split('：')[1].split('（')[0].split('(')[0] : task.text.split(' を ')[0];
+    const drillName = getDrillNameFromTaskText(task.text);
     
     let localType = "その他";
     const text = finalMistakeText.toLowerCase();
@@ -3818,7 +3847,8 @@ function renderNigateBuster() {
 
   const groups = {};
   pendingRecords.forEach(record => {
-    const key = record.drillName || "その他";
+    // 表記揺れ（かっこ付き、プレフィックス付き等）をすべて統一して同一フォルダにマージする
+    const key = getDrillNameFromTaskText(record.drillName) || "その他";
     if (!groups[key]) {
       groups[key] = [];
     }
@@ -4897,11 +4927,12 @@ function renderNigateReport() {
       if (record.imageUrl) {
         const item = document.createElement('div');
         item.className = 'nigate-album-item';
-        item.title = `${record.date} - ${record.drillName}: ${record.mistakeText}`;
+        const cleanDrillName = getDrillNameFromTaskText(record.drillName);
+        item.title = `${record.date} - ${cleanDrillName}: ${record.mistakeText}`;
         item.innerHTML = `<img src="${record.imageUrl}" class="nigate-album-img" alt="間違い写真">`;
         
         item.addEventListener('click', () => {
-          alert(`📷 ${record.date}の ${record.drillName} の間違い\n【メモ】\n${record.mistakeText}`);
+          alert(`📷 ${record.date}の ${cleanDrillName} の間違い\n【メモ】\n${record.mistakeText}`);
         });
 
         albumGridEl.appendChild(item);
