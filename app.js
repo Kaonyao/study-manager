@@ -3704,29 +3704,72 @@ function completeDrillTask(task, actualAmount = null) {
   if (task.drillId !== null && task.drillId !== undefined) {
     const drill = drills.find(d => d.id === task.drillId);
     if (drill) {
-      if (drill.type === 'time') return;
-      
       const hasActual = actualAmount !== null && actualAmount !== undefined;
       const parsedActual = hasActual ? parseInt(actualAmount, 10) : null;
-      
-      if (drill.totalPages > 0 && task.endPage > 0) {
-        if (hasActual && !isNaN(parsedActual)) {
-          drill.currentProgress = Math.min(task.startPage + parsedActual - 1, drill.totalPages);
-        } else {
-          drill.currentProgress = parseInt(task.endPage, 10);
+
+      if (drill.type !== 'time') {
+        if (drill.totalPages > 0 && task.endPage > 0) {
+          if (hasActual && !isNaN(parsedActual) && parsedActual > 0) {
+            drill.currentProgress = Math.min(task.startPage + parsedActual - 1, drill.totalPages);
+            task.endPage = Math.min(task.startPage + parsedActual - 1, drill.totalPages);
+          } else {
+            drill.currentProgress = parseInt(task.endPage, 10);
+          }
+          drill.currentProgress = Math.max(0, drill.currentProgress);
+          drill.startPage = Math.min(drill.currentProgress + 1, drill.totalPages + 1);
         }
-        drill.currentProgress = Math.max(0, drill.currentProgress);
-        drill.startPage = Math.min(drill.currentProgress + 1, drill.totalPages + 1);
+        
+        if (drill.totalQuestions > 0 && task.endQuestion > 0) {
+          if (hasActual && !isNaN(parsedActual) && parsedActual > 0) {
+            drill.currentQuestionProgress = Math.min(task.startQuestion + parsedActual - 1, drill.totalQuestions);
+            task.endQuestion = Math.min(task.startQuestion + parsedActual - 1, drill.totalQuestions);
+          } else {
+            drill.currentQuestionProgress = parseInt(task.endQuestion, 10);
+          }
+          drill.currentQuestionProgress = Math.max(0, drill.currentQuestionProgress);
+          drill.startQuestion = Math.min(drill.currentQuestionProgress + 1, drill.totalQuestions + 1);
+        }
       }
-      
-      if (drill.totalQuestions > 0 && task.endQuestion > 0) {
-        if (hasActual && !isNaN(parsedActual)) {
-          drill.currentQuestionProgress = Math.min(task.startQuestion + parsedActual - 1, drill.totalQuestions);
+
+      // タスクのテキスト（表示名）も実際にやった実績に合わせて書き換える
+      if (hasActual && !isNaN(parsedActual) && parsedActual > 0) {
+        let text = task.text;
+        
+        if (drill.type === 'time') {
+          // 時間タイプのドリル：「10分」などの表記を「20分」などに置換
+          const timeRegex = /(\d+)分/;
+          if (timeRegex.test(text)) {
+            text = text.replace(timeRegex, `${parsedActual}分`);
+          }
         } else {
-          drill.currentQuestionProgress = parseInt(task.endQuestion, 10);
+          // ページタイプのドリル：「P:1〜2」などの表記を「P:1〜4」などに置換
+          if (drill.totalPages > 0 && task.startPage > 0) {
+            const pageRegex = /P:(\d+)〜\d+/;
+            if (pageRegex.test(text)) {
+              text = text.replace(pageRegex, `P:$1〜${task.endPage}`);
+            } else {
+              const singlePageRegex = /P:(\d+)/;
+              if (singlePageRegex.test(text)) {
+                text = text.replace(singlePageRegex, `P:$1〜${task.endPage}`);
+              }
+            }
+          }
+          
+          // 問題タイプのドリル：「Q:1〜2」などの表記を「Q:1〜4」などに置換
+          if (drill.totalQuestions > 0 && task.startQuestion > 0) {
+            const questionRegex = /Q:(\d+)〜\d+/;
+            if (questionRegex.test(text)) {
+              text = text.replace(questionRegex, `Q:$1〜${task.endQuestion}`);
+            } else {
+              const singleQuestionRegex = /Q:(\d+)/;
+              if (singleQuestionRegex.test(text)) {
+                text = text.replace(singleQuestionRegex, `Q:$1〜${task.endQuestion}`);
+              }
+            }
+          }
         }
-        drill.currentQuestionProgress = Math.max(0, drill.currentQuestionProgress);
-        drill.startQuestion = Math.min(drill.currentQuestionProgress + 1, drill.totalQuestions + 1);
+        
+        task.text = text;
       }
       
       saveDrills();
