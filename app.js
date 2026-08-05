@@ -4884,6 +4884,54 @@ function renderDayTasks(dateStr) {
     else if (task.category === 'おてつだい') badgeHtml = '<span class="task-cat-badge help" style="margin-right: 6px;">🏠</span>';
 
     let displayText = escapeHTML(task.text);
+    
+    // 【動的実績反映】もしこのタスクに対応する履歴（history）の実績データがあれば、表示用テキストを実績値に書き換える！
+    // これにより過去に記録されたタスクや、新規完了したタスクの表示が実績に同期します。
+    const hist = history.find(h => h.id === task.id || h.id.toString() === task.id.toString());
+    if (hist && hist.amount > 0 && task.drillId !== null && task.drillId !== undefined) {
+      const drill = drills.find(d => d.id === task.drillId);
+      if (drill && drill.type !== 'time') {
+        const actualAmt = parseInt(hist.amount, 10);
+        const startP = parseInt(task.startPage, 10) || 1;
+        const endP = startP + actualAmt - 1;
+        const startQ = parseInt(task.startQuestion, 10) || 1;
+        const endQ = startQ + actualAmt - 1;
+
+        if (drill.totalPages > 0 && task.startPage > 0) {
+          const pageRegex = /P:(\d+)〜\d+/;
+          if (pageRegex.test(displayText)) {
+            displayText = displayText.replace(pageRegex, `P:$1〜${endP}`);
+          } else {
+            const singlePageRegex = /P:(\d+)/;
+            if (singlePageRegex.test(displayText)) {
+              displayText = displayText.replace(singlePageRegex, `P:$1〜${endP}`);
+            } else {
+              displayText += `（P:${startP}〜${endP}）`;
+            }
+          }
+        }
+
+        if (drill.totalQuestions > 0 && task.startQuestion > 0) {
+          const questionRegex = /Q:(\d+)〜\d+/;
+          if (questionRegex.test(displayText)) {
+            displayText = displayText.replace(questionRegex, `Q:$1〜${endQ}`);
+          } else {
+            const singleQuestionRegex = /Q:(\d+)/;
+            if (singleQuestionRegex.test(displayText)) {
+              displayText = displayText.replace(singleQuestionRegex, `Q:$1〜${endQ}`);
+            } else {
+              displayText += `（Q:${startQ}〜${endQ}）`;
+            }
+          }
+        }
+      } else if (drill && drill.type === 'time') {
+        const timeRegex = /(\d+)分/;
+        if (timeRegex.test(displayText)) {
+          displayText = displayText.replace(timeRegex, `${hist.amount}分`);
+        }
+      }
+    }
+
     const prefixRegex = /^([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])?\s*(しゅくだい|べんきょう|れんしゅう|ならいごと|おてつだい)[\uff1a:]\s*/;
     displayText = displayText.replace(prefixRegex, "");
 
