@@ -2059,7 +2059,7 @@ function renderTasks() {
     const isDone = task.status === 'completed';
     const hist = isDone ? history.find(h => h.id === task.id || h.id.toString() === task.id.toString()) : null;
     
-    const pageMatch = displayText.match(/(?:（|\()(P:\d+(?:〜\d+)?)(?:）|\))/);
+    const pageMatch = displayText.match(/(?:（|\()(P:\d+(?:[〜~]\d+)?)(?:）|\))/);
     if (pageMatch) {
       const val = pageMatch[1];
       if (isDone) {
@@ -2071,7 +2071,7 @@ function renderTasks() {
       displayText = displayText.replace(pageMatch[0], "").trim();
     }
     
-    const questionMatch = displayText.match(/(?:（|\()(Q:\d+(?:〜\d+)?)(?:）|\))/);
+    const questionMatch = displayText.match(/(?:（|\()(Q:\d+(?:[〜~]\d+)?)(?:）|\))/);
     if (questionMatch) {
       const val = questionMatch[1];
       if (isDone) {
@@ -2095,8 +2095,8 @@ function renderTasks() {
       displayText = displayText.replace(timeMatch[0], "").trim();
     }
 
-    displayText = displayText.replace(/(P:\d+〜\d+|P:\d+)/g, '<span class="task-page-highlight">$1</span>');
-    displayText = displayText.replace(/(Q:\d+〜\d+|Q:\d+)/g, '<span class="task-question-highlight">$1</span>');
+    displayText = displayText.replace(/(P:\d+[〜~]\d+|P:\d+)/g, '<span class="task-page-highlight">$1</span>');
+    displayText = displayText.replace(/(Q:\d+[〜~]\d+|Q:\d+)/g, '<span class="task-question-highlight">$1</span>');
     displayText = displayText.replace(/(（|\()(\d+分)(）|\))/g, '$1<span class="task-time-highlight">$2</span>$3');
 
     li.innerHTML = `
@@ -3789,7 +3789,7 @@ function completeDrillTask(task, actualAmount = null) {
         } else {
           // ページタイプのドリル：「P:1〜2」などの表記を「P:1〜4」などに置換
           if (drill.totalPages > 0 && task.startPage > 0) {
-            const pageRegex = /P:(\d+)〜\d+/;
+            const pageRegex = /P:(\d+)[〜~]\d+/;
             if (pageRegex.test(text)) {
               text = text.replace(pageRegex, `P:$1〜${task.endPage}`);
             } else {
@@ -3802,7 +3802,7 @@ function completeDrillTask(task, actualAmount = null) {
           
           // 問題タイプのドリル：「Q:1〜2」などの表記を「Q:1〜4」などに置換
           if (drill.totalQuestions > 0 && task.startQuestion > 0) {
-            const questionRegex = /Q:(\d+)〜\d+/;
+            const questionRegex = /Q:(\d+)[〜~]\d+/;
             if (questionRegex.test(text)) {
               text = text.replace(questionRegex, `Q:$1〜${task.endQuestion}`);
             } else {
@@ -3852,7 +3852,7 @@ function completeDrillTask(task, actualAmount = null) {
           if (drill.type !== 'time') {
             // P:X〜Y の置換
             if (drill.totalPages > 0 && futureActiveTask.startPage > 0) {
-              const pageRegex = /P:(\d+)〜\d+/;
+              const pageRegex = /P:(\d+)[〜~]\d+/;
               if (pageRegex.test(futureText)) {
                 futureText = futureText.replace(pageRegex, `P:${futureActiveTask.startPage}〜${futureActiveTask.endPage}`);
               } else {
@@ -3864,13 +3864,13 @@ function completeDrillTask(task, actualAmount = null) {
             }
             // Q:X〜Y の置換
             if (drill.totalQuestions > 0 && futureActiveTask.startQuestion > 0) {
-              const questionRegex = /Q:(\d+)〜\d+/;
+              const questionRegex = /Q:(\d+)[〜~]\d+/;
               if (questionRegex.test(futureText)) {
-                futureText = futureText.replace(questionRegex, `Q:${futureActiveTask.startQuestion}~${futureActiveTask.endQuestion}`);
+                futureText = futureText.replace(questionRegex, `Q:${futureActiveTask.startQuestion}〜${futureActiveTask.endQuestion}`);
               } else {
                 const singleQuestionRegex = /Q:(\d+)/;
                 if (singleQuestionRegex.test(futureText)) {
-                  futureText = futureText.replace(singleQuestionRegex, `Q:${futureActiveTask.startQuestion}~${futureActiveTask.endQuestion}`);
+                  futureText = futureText.replace(singleQuestionRegex, `Q:${futureActiveTask.startQuestion}〜${futureActiveTask.endQuestion}`);
                 }
               }
             }
