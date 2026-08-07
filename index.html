@@ -60,7 +60,10 @@
         <section class="task-section">
           <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
             <h2 class="section-title" style="margin-bottom: 0; font-size: 1.05rem; font-weight: 700; color: var(--color-text);">今日のすること</h2>
-            <button type="button" id="btn-toggle-simulation" class="btn-icon-text" style="font-size: 0.75rem; padding: 6px 12px; font-weight: 700;">🌅 明日の予定</button>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" id="btn-toggle-yesterday" class="btn-toggle-yesterday-btn" style="font-size: 0.75rem; padding: 6px 12px; font-weight: 700; background-color: var(--color-bg-app); color: var(--color-text-light); border: 1.5px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; gap: 2px; transition: all 0.2s;">⏮️ 昨日の登録</button>
+              <button type="button" id="btn-toggle-simulation" class="btn-icon-text" style="font-size: 0.75rem; padding: 6px 12px; font-weight: 700;">🌅 明日の予定</button>
+            </div>
           </div>
           
           <!-- カテゴリ切り替えタブ -->

@@ -54,6 +54,7 @@ const gameState = {
   mistakeRecords: [],         // 蓄積された間違いの記録（写真＋傾向）
   userProfile: null,          // ユーザーのプロフィール
   simulationMode: false,      // 翌日の予定シミュレーション表示モード
+  yesterdayMode: false,       // 昨日の実績登録モード
   weeklyReportMode: 'thisWeek',  // 'thisWeek' or 'lastWeek'
   allCompletedDates: [],       // すべてのタスクを完了した日の日付リスト
   weeklySchedules: []         // 時間割スケジュール初期化
@@ -1612,7 +1613,7 @@ function addHistoryRecord(task, type = 'custom', actualAmount = null) {
 
   const record = {
     id: task.id,
-    date: new Date().toLocaleDateString('ja-JP'),
+    date: task.date || getTodayDateString(),
     taskText: task.text,
     type: type,
     amount: amount,
@@ -1629,8 +1630,8 @@ function removeHistoryRecord(taskId) {
 }
 
 function addCompletedTask(task) {
-  const todayStr = getTodayDateString();
-  task.completedDate = todayStr;
+  const targetDate = task.date || getTodayDateString();
+  task.completedDate = targetDate;
   
   completedTasks = completedTasks.filter(t => t.id !== task.id && t.id.toString() !== task.id.toString());
   
@@ -1937,15 +1938,31 @@ function applyNextDayProgress() {
 // 4. タスクの描画処理
 function renderTasks() {
   const toggleBtn = document.getElementById('btn-toggle-simulation');
-  if (toggleBtn) {
+  const yesterdayBtn = document.getElementById('btn-toggle-yesterday');
+
+  if (toggleBtn && yesterdayBtn) {
     if (gameState.simulationMode) {
       toggleBtn.textContent = '🏠 今日を見る';
       toggleBtn.style.backgroundColor = 'var(--color-primary-light)';
       toggleBtn.style.color = 'var(--color-primary)';
+      toggleBtn.style.display = 'inline-block';
+      yesterdayBtn.style.display = 'none'; // 昨日モードボタンは非表示
+    } else if (gameState.yesterdayMode) {
+      yesterdayBtn.textContent = '🏠 今日を見る';
+      yesterdayBtn.style.backgroundColor = 'var(--color-primary-light)';
+      yesterdayBtn.style.color = 'var(--color-primary)';
+      yesterdayBtn.style.display = 'inline-block';
+      toggleBtn.style.display = 'none'; // シミュレーションボタンは非表示
     } else {
       toggleBtn.textContent = '🌅 明日の予定';
       toggleBtn.style.backgroundColor = 'var(--color-secondary-light)';
       toggleBtn.style.color = 'var(--color-secondary)';
+      toggleBtn.style.display = 'inline-block';
+
+      yesterdayBtn.textContent = '⏮️ 昨日の登録';
+      yesterdayBtn.style.backgroundColor = 'var(--color-bg-app)';
+      yesterdayBtn.style.color = 'var(--color-text-light)';
+      yesterdayBtn.style.display = 'inline-block';
     }
   }
 
@@ -1959,19 +1976,35 @@ function renderTasks() {
       <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 2px;">「明日はこれだけ実施すれば完了」のリストです</div>
     `;
     taskListEl.appendChild(banner);
+  } else if (gameState.yesterdayMode) {
+    const banner = document.createElement('div');
+    banner.className = 'simulation-banner';
+    banner.style.backgroundColor = '#fff3cd';
+    banner.style.border = '1px solid #ffeeba';
+    banner.innerHTML = `
+      <div style="font-size: 0.95rem; font-weight: 700; color: #856404;">⏮️ 昨日の実績登録中</div>
+      <div style="font-size: 0.75rem; color: #856404; margin-top: 2px;">昨日やり残したタスクです。完了させて実績を入力してね！</div>
+    `;
+    taskListEl.appendChild(banner);
   }
 
   const todayDateStr = getTodayDateString();
   const tomorrowDateStr = getTomorrowDateString();
-  const tasksToRender = gameState.simulationMode 
-    ? getTomorrowSimulatedTasks() 
-    : tasks.filter(t => {
-        if (t.status === 'deleted') return false;
-        // 今日のタスク、または今日延期したタスク（日付が明日で、ステータスが postponed のもの）を今日のリストに含める
-        const isToday = !t.date || t.date === todayDateStr;
-        const isPostponedToday = t.status === 'postponed' && t.date === tomorrowDateStr;
-        return isToday || isPostponedToday;
-      });
+  
+  let tasksToRender = [];
+  if (gameState.simulationMode) {
+    tasksToRender = getTomorrowSimulatedTasks();
+  } else if (gameState.yesterdayMode) {
+    tasksToRender = getYesterdaySimulatedTasks();
+  } else {
+    tasksToRender = tasks.filter(t => {
+      if (t.status === 'deleted') return false;
+      // 今日のタスク、または今日延期したタスク（日付が明日で、ステータスが postponed のもの）を今日のリストに含める
+      const isToday = !t.date || t.date === todayDateStr;
+      const isPostponedToday = t.status === 'postponed' && t.date === tomorrowDateStr;
+      return isToday || isPostponedToday;
+    });
+  }
   
   tasksToRender.forEach(task => {
     if (currentCategoryFilter !== 'all' && task.category !== currentCategoryFilter) {
@@ -2014,8 +2047,9 @@ function renderTasks() {
     const descHtml = hasDesc ? `<div class="task-desc-panel" style="display: none;">💡 メモ：${escapeHTML(task.description)}</div>` : '';
 
     const isSim = gameState.simulationMode;
-    const canPostpone = !isSim && task.status === 'active';
-    const canDelete = !isSim;
+    const isYesterday = gameState.yesterdayMode;
+    const canPostpone = !isSim && !isYesterday && task.status === 'active';
+    const canDelete = !isSim && !isYesterday;
 
     let displayText = escapeHTML(task.text);
     const prefixRegex = /^([\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])?\s*(しゅくだい|べんきょう|れんしゅう|ならいごと|おてつだい)[\uff1a:]\s*/;
@@ -2354,6 +2388,12 @@ function setupEventListeners() {
   const btnToggleSimulationEl = document.getElementById('btn-toggle-simulation');
   if (btnToggleSimulationEl) {
     btnToggleSimulationEl.addEventListener('click', handleToggleSimulation);
+  }
+
+  // 昨日の実績登録ボタンの制御
+  const btnToggleYesterdayEl = document.getElementById('btn-toggle-yesterday');
+  if (btnToggleYesterdayEl) {
+    btnToggleYesterdayEl.addEventListener('click', handleToggleYesterday);
   }
 
   // 答え合わせモーダル内の写真アップロード制御
@@ -4173,6 +4213,26 @@ function exitSimulationMode() {
   renderTasks();
 }
 
+function enterYesterdayMode() {
+  gameState.yesterdayMode = true;
+  gameState.simulationMode = false; // シミュレーションは解除
+  renderTasks();
+  switchToAdventureTab();
+}
+
+function exitYesterdayMode() {
+  gameState.yesterdayMode = false;
+  renderTasks();
+}
+
+function handleToggleYesterday() {
+  if (gameState.yesterdayMode) {
+    exitYesterdayMode();
+  } else {
+    enterYesterdayMode();
+  }
+}
+
 // ドリルのアーカイブ
 function archiveDrill(id) {
   const drill = drills.find(d => d.id === id || d.id.toString() === id.toString());
@@ -4248,6 +4308,138 @@ function getTomorrowDateString() {
   const d = new Date();
   d.setDate(d.getDate() + 1);
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+}
+
+function getYesterdayDayName() {
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return days[d.getDay()];
+}
+
+function getYesterdayDateString() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+}
+
+// 昨日の未完了タスク（やり残し）を動的にシミュレーション生成する
+function getYesterdaySimulatedTasks() {
+  const yesterdayDay = getYesterdayDayName();
+  const yesterdayDateStr = getYesterdayDateString();
+  const todayDateStr = getTodayDateString();
+  
+  const yesterdaySchedules = gameState.weeklySchedules 
+    ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(yesterdayDay)) 
+    : [];
+
+  const simulatedTasks = [];
+  
+  // すでに昨日完了したタスクのIDや名前をリスト化して除外用にする
+  const completedTaskKeys = new Set(
+    completedTasks
+      .filter(t => t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr)
+      .map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
+  );
+
+  // 1. ドリルタスクの昨日の分を生成
+  drills.filter(d => !d.archived).forEach(drill => {
+    if (drill.days && !drill.days.includes(yesterdayDay)) return;
+    if (completedTaskKeys.has(`drill_${drill.id}`)) return;
+
+    let startPageVal = (drill.currentProgress || 0) + 1;
+    let startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+    
+    // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
+    const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
+    if (completedToday) {
+      const histToday = history.find(h => h.id === completedToday.id);
+      if (histToday && histToday.amount > 0) {
+        if (drill.totalPages > 0) {
+          startPageVal = Math.max(1, startPageVal - histToday.amount);
+        }
+        if (drill.totalQuestions > 0) {
+          startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+        }
+      }
+    }
+
+    let drillTaskId = "";
+    let taskText = "";
+    const emoji = getCategoryEmoji(drill.category);
+    let timingSuffix = "";
+    if (drill.timing === 'before_lesson') timingSuffix = " (予定のまえ)";
+    else if (drill.timing === 'after_lesson') timingSuffix = " (予定のあと)";
+    else if (drill.timing && drill.timing.startsWith('before_schedule:')) {
+      const lessonName = drill.timing.split(':')[1];
+      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のまえ)`;
+    } else if (drill.timing && drill.timing.startsWith('after_schedule:')) {
+      const lessonName = drill.timing.split(':')[1];
+      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のあと)`;
+    }
+
+    if (drill.type === 'time') {
+      taskText = `${emoji} ${drill.category}：${drill.name}（${drill.duration}分）`;
+      drillTaskId = `drill_${drill.id}_time_yesterday`;
+    } else {
+      let pageText = "";
+      let endPageVal = 0;
+      if (drill.totalPages > 0) {
+        const tomorrowPages = drill.dailyAmount;
+        endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
+        pageText = `P:${startPageVal}〜${endPageVal}`;
+      }
+      let questionText = "";
+      let endQuestionVal = 0;
+      if (drill.totalQuestions > 0) {
+        const tomorrowQs = drill.dailyQuestionAmount;
+        endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
+        questionText = `Q:${startQuestionVal}〜${endQuestionVal}`;
+      }
+      let rangeText = "";
+      if (pageText && questionText) {
+        rangeText = `（${pageText} / ${questionText}）`;
+      } else if (pageText) {
+        rangeText = `（${pageText}）`;
+      } else if (questionText) {
+        rangeText = `（${questionText}）`;
+      }
+      drillTaskId = `drill_${drill.id}_${startPageVal}_${endPageVal}_${startQuestionVal}_${endQuestionVal}_yesterday`;
+      taskText = `${emoji} ${drill.category}：${drill.name}${rangeText}`;
+    }
+    taskText += timingSuffix;
+
+    simulatedTasks.push({
+      id: drillTaskId,
+      text: taskText,
+      status: 'active',
+      drillId: drill.id,
+      category: drill.category || "べんきょう",
+      description: drill.description || "",
+      date: yesterdayDateStr,
+      isYesterday: true
+    });
+  });
+
+  // 2. 通常の時間割の昨日の分を生成
+  yesterdaySchedules.forEach(schedule => {
+    if (schedule.drillId) return;
+    if (completedTaskKeys.has(schedule.name.trim())) return;
+
+    const weeklyTaskId = `weekly_${schedule.id}_${yesterdayDateStr}`;
+    simulatedTasks.push({
+      id: weeklyTaskId,
+      text: schedule.name,
+      status: 'active',
+      drillId: null,
+      category: schedule.category || 'ならいごと',
+      description: schedule.description || '',
+      date: yesterdayDateStr,
+      isYesterday: true
+    });
+  });
+
+  return simulatedTasks;
 }
 
 // 翌日シミュレーションタスクの生成
