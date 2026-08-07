@@ -3827,7 +3827,8 @@ function completeDrillTask(task, actualAmount = null) {
       if (targetDate && targetDate !== todayDateStr) {
         // 今日（または将来）の未完了の同じドリルタスクを探す
         const futureActiveTask = tasks.find(t => 
-          t.drillId === drill.id && 
+          t.drillId !== null && t.drillId !== undefined && 
+          t.drillId.toString() === drill.id.toString() && 
           t.status === 'active' && 
           (!t.date || t.date >= todayDateStr)
         );
@@ -3844,6 +3845,15 @@ function completeDrillTask(task, actualAmount = null) {
             futureActiveTask.startQuestion = drill.startQuestion;
             const qAmount = drill.dailyQuestionAmount;
             futureActiveTask.endQuestion = Math.min(futureActiveTask.startQuestion + qAmount - 1, drill.totalQuestions);
+          }
+          
+          // タスク ID も新しい進捗に合わせて再構築する
+          if (futureActiveTask.id && futureActiveTask.id.toString().startsWith('drill_')) {
+            if (drill.type === 'time') {
+              futureActiveTask.id = `drill_${drill.id}_time`;
+            } else {
+              futureActiveTask.id = `drill_${drill.id}_${futureActiveTask.startPage}_${futureActiveTask.endPage}_${futureActiveTask.startQuestion}_${futureActiveTask.endQuestion}`;
+            }
           }
           
           // 表示テキスト（タスク名）も最新範囲に置換
