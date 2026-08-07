@@ -2854,7 +2854,12 @@ function handleTaskCheck(event) {
     const checkbox = event.target;
     const taskIdStr = checkbox.dataset.id;
 
-    const task = tasks.find(t => t.id === taskIdStr || t.id.toString() === taskIdStr);
+    let task = tasks.find(t => t.id === taskIdStr || t.id.toString() === taskIdStr);
+    if (!task && gameState.yesterdayMode) {
+      const yesterdayTasks = getYesterdaySimulatedTasks();
+      task = yesterdayTasks.find(t => t.id === taskIdStr || t.id.toString() === taskIdStr);
+    }
+    
     if (!task) return;
 
     if (checkbox.checked) {
