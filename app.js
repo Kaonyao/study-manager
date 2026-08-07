@@ -4340,11 +4340,19 @@ function getYesterdaySimulatedTasks() {
 
   const simulatedTasks = [];
   
-  // すでに昨日完了したタスクのIDや名前をリスト化して除外用にする
+  // A. すでに昨日完了したタスク（completedTasks に入っているもの）は、そのまま status: 'completed' でリストに含める！
+  const yesterdayCompletedTasks = completedTasks.filter(t => t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr);
+  yesterdayCompletedTasks.forEach(t => {
+    simulatedTasks.push({
+      ...t,
+      status: 'completed', // 確実に完了状態にする
+      isYesterday: true
+    });
+  });
+
+  // B. 昨日完了済みのドリルIDや予定名のSet（重複生成を避けるためのチェック用）
   const completedTaskKeys = new Set(
-    completedTasks
-      .filter(t => t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr)
-      .map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
+    yesterdayCompletedTasks.map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
   );
 
   // 1. ドリルタスクの昨日の分を生成
