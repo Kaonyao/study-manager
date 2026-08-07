@@ -3816,6 +3816,70 @@ function completeDrillTask(task, actualAmount = null) {
         
         task.text = text;
       }
+
+      // 【自動スライド処理】
+      // もしこれが「昨日（または過去）」の実績登録だった場合、
+      // メモリ上の「今日（または将来）」のアクティブな同じドリルタスクの開始位置を、
+      // ドリルマスタの最新進捗（次の開始ページ/問題）に合わせて自動で前方にスライド更新する！
+      const targetDate = task.completedDate || task.date;
+      const todayDateStr = getTodayDateString();
+      
+      if (targetDate && targetDate !== todayDateStr) {
+        // 今日（または将来）の未完了の同じドリルタスクを探す
+        const futureActiveTask = tasks.find(t => 
+          t.drillId === drill.id && 
+          t.status === 'active' && 
+          (!t.date || t.date >= todayDateStr)
+        );
+        
+        if (futureActiveTask) {
+          // ドリルの最新開始位置を反映
+          if (drill.totalPages > 0) {
+            futureActiveTask.startPage = drill.startPage;
+            const amount = drill.dailyAmount;
+            futureActiveTask.endPage = Math.min(futureActiveTask.startPage + amount - 1, drill.totalPages);
+          }
+          
+          if (drill.totalQuestions > 0) {
+            futureActiveTask.startQuestion = drill.startQuestion;
+            const qAmount = drill.dailyQuestionAmount;
+            futureActiveTask.endQuestion = Math.min(futureActiveTask.startQuestion + qAmount - 1, drill.totalQuestions);
+          }
+          
+          // 表示テキスト（タスク名）も最新範囲に置換
+          let futureText = futureActiveTask.text;
+          
+          if (drill.type !== 'time') {
+            // P:X〜Y の置換
+            if (drill.totalPages > 0 && futureActiveTask.startPage > 0) {
+              const pageRegex = /P:(\d+)〜\d+/;
+              if (pageRegex.test(futureText)) {
+                futureText = futureText.replace(pageRegex, `P:${futureActiveTask.startPage}〜${futureActiveTask.endPage}`);
+              } else {
+                const singlePageRegex = /P:(\d+)/;
+                if (singlePageRegex.test(futureText)) {
+                  futureText = futureText.replace(singlePageRegex, `P:${futureActiveTask.startPage}〜${futureActiveTask.endPage}`);
+                }
+              }
+            }
+            // Q:X〜Y の置換
+            if (drill.totalQuestions > 0 && futureActiveTask.startQuestion > 0) {
+              const questionRegex = /Q:(\d+)〜\d+/;
+              if (questionRegex.test(futureText)) {
+                futureText = futureText.replace(questionRegex, `Q:${futureActiveTask.startQuestion}~${futureActiveTask.endQuestion}`);
+              } else {
+                const singleQuestionRegex = /Q:(\d+)/;
+                if (singleQuestionRegex.test(futureText)) {
+                  futureText = futureText.replace(singleQuestionRegex, `Q:${futureActiveTask.startQuestion}~${futureActiveTask.endQuestion}`);
+                }
+              }
+            }
+          }
+          
+          futureActiveTask.text = futureText;
+          saveTasks(); // 変更を即時保存
+        }
+      }
       
       saveDrills();
       checkAndAutoArchiveDrill(drill);
