@@ -1901,28 +1901,43 @@ function checkDateChange() {
 // 日付変更時の進捗更新
 function applyNextDayProgress() {
   const todayStr = getTodayDateString();
+  const yesterdayStr = getYesterdayDateString();
+  
   tasks = tasks.filter(task => {
+    // 削除されたものは物理的に消去する
     if (task.status === 'deleted') {
       return false;
     }
+    
+    // 一昨日（2日以上前）のタスクは物理的に消去する（1日前までのデータだけを保存する）
+    if (task.date && task.date < yesterdayStr) {
+      return false;
+    }
+    
     if (task.drillId !== null && task.drillId !== undefined) {
       if (task.status === 'postponed') {
+        // 延期したものは、日付を今日に書き換えて active (未完了) にする
         task.status = 'active';
         task.date = todayStr;
         return true;
       }
-      return false;
+      // 通常のドリルタスク（未完了・完了を問わず）は昨日の日付のまま残す
+      return true;
     } else if (task.id && task.id.toString().startsWith('weekly_')) {
       if (task.status === 'postponed') {
         task.status = 'active';
         task.date = todayStr;
         return true;
       }
-      return false;
+      // 時間割予定も昨日の日付のまま残す
+      return true;
     } else {
+      // カスタムタスク（手動追加タスク）
       if (task.status === 'completed') {
-        return false;
+        // 完了したカスタムタスクは昨日の日付のまま残す
+        return true;
       } else {
+        // 未完了のカスタムタスクは、日付を今日に書き換えて active にする（今日のすることにスライド）
         task.status = 'active'; 
         task.date = todayStr;
         return true;
@@ -4402,137 +4417,41 @@ function getYesterdayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
-// 昨日の未完了タスク（やり残し）を動的にシミュレーション生成する
+// 昨日の本物のタスクリスト（および完了したタスク）を収集して表示用データを生成する
 function getYesterdaySimulatedTasks() {
-  const yesterdayDay = getYesterdayDayName();
   const yesterdayDateStr = getYesterdayDateString();
-  const todayDateStr = getTodayDateString();
-  
-  const yesterdaySchedules = gameState.weeklySchedules 
-    ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(yesterdayDay)) 
-    : [];
-
   const simulatedTasks = [];
   
-  // A. すでに昨日完了したタスク（completedTasks に入っているもの）は、そのまま status: 'completed' でリストに含める！
-  const yesterdayCompletedTasks = completedTasks.filter(t => t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr);
-  yesterdayCompletedTasks.forEach(t => {
+  // 1. tasks 配列の中から、実際に日付が昨日のタスク（未完了・完了・手動追加すべて）を抽出する
+  const yesterdayTasksFromMemory = tasks.filter(t => 
+    t.date === yesterdayDateStr && 
+    t.status !== 'deleted'
+  );
+  
+  yesterdayTasksFromMemory.forEach(t => {
     simulatedTasks.push({
       ...t,
-      status: 'completed', // 確実に完了状態にする
       isYesterday: true
     });
   });
-
-  // B. 昨日完了済みのドリルIDや予定名のSet（重複生成を避けるためのチェック用）
-  const completedTaskKeys = new Set(
-    yesterdayCompletedTasks.map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
+  
+  // 2. completedTasks (完了実績) から、日付が昨日の完了タスクを抽出してマージする (データの漏れ防止用)
+  const yesterdayCompletedTasks = completedTasks.filter(t => 
+    t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr
   );
-
-  // 1. ドリルタスクの昨日の分を生成
-  drills.filter(d => !d.archived).forEach(drill => {
-    if (drill.days && !drill.days.includes(yesterdayDay)) return;
-    if (completedTaskKeys.has(`drill_${drill.id}`)) return;
-
-    let startPageVal = 0;
-    let endPageVal = 0;
-    let startQuestionVal = 0;
-    let endQuestionVal = 0;
-    
-    if (drill.type !== 'time') {
-      startPageVal = (drill.currentProgress || 0) + 1;
-      startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
-      
-      // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
-      const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
-      if (completedToday) {
-        const histToday = history.find(h => h.id === completedToday.id);
-        if (histToday && histToday.amount > 0) {
-          if (drill.totalPages > 0) {
-            startPageVal = Math.max(1, startPageVal - histToday.amount);
-          }
-          if (drill.totalQuestions > 0) {
-            startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
-          }
-        }
-      }
+  
+  yesterdayCompletedTasks.forEach(compTask => {
+    const exists = simulatedTasks.some(t => 
+      t.id === compTask.id || 
+      t.id.toString() === compTask.id.toString()
+    );
+    if (!exists) {
+      simulatedTasks.push({
+        ...compTask,
+        status: 'completed',
+        isYesterday: true
+      });
     }
-
-    let drillTaskId = "";
-    let taskText = "";
-    const emoji = getCategoryEmoji(drill.category);
-    let timingSuffix = "";
-    if (drill.timing === 'before_lesson') timingSuffix = " (予定のまえ)";
-    else if (drill.timing === 'after_lesson') timingSuffix = " (予定のあと)";
-    else if (drill.timing && drill.timing.startsWith('before_schedule:')) {
-      const lessonName = drill.timing.split(':')[1];
-      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のまえ)`;
-    } else if (drill.timing && drill.timing.startsWith('after_schedule:')) {
-      const lessonName = drill.timing.split(':')[1];
-      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のあと)`;
-    }
-
-    if (drill.type === 'time') {
-      taskText = `${emoji} ${drill.category}：${drill.name}（${drill.duration}分）`;
-      drillTaskId = `drill_${drill.id}_time_yesterday`;
-    } else {
-      let pageText = "";
-      if (drill.totalPages > 0) {
-        const tomorrowPages = drill.dailyAmount;
-        endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
-        pageText = `P:${startPageVal}〜${endPageVal}`;
-      }
-      let questionText = "";
-      if (drill.totalQuestions > 0) {
-        const tomorrowQs = drill.dailyQuestionAmount;
-        endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
-        questionText = `Q:${startQuestionVal}〜${endQuestionVal}`;
-      }
-      let rangeText = "";
-      if (pageText && questionText) {
-        rangeText = `（${pageText} / ${questionText}）`;
-      } else if (pageText) {
-        rangeText = `（${pageText}）`;
-      } else if (questionText) {
-        rangeText = `（${questionText}）`;
-      }
-      drillTaskId = `drill_${drill.id}_${startPageVal}_${endPageVal}_${startQuestionVal}_${endQuestionVal}_yesterday`;
-      taskText = `${emoji} ${drill.category}：${drill.name}${rangeText}`;
-    }
-    taskText += timingSuffix;
-
-    simulatedTasks.push({
-      id: drillTaskId,
-      text: taskText,
-      status: 'active',
-      drillId: drill.id,
-      startPage: startPageVal,
-      endPage: endPageVal,
-      startQuestion: startQuestionVal,
-      endQuestion: endQuestionVal,
-      category: drill.category || "べんきょう",
-      description: drill.description || "",
-      date: yesterdayDateStr,
-      isYesterday: true
-    });
-  });
-
-  // 2. 通常の時間割の昨日の分を生成
-  yesterdaySchedules.forEach(schedule => {
-    if (schedule.drillId) return;
-    if (completedTaskKeys.has(schedule.name.trim())) return;
-
-    const weeklyTaskId = `weekly_${schedule.id}_${yesterdayDateStr}`;
-    simulatedTasks.push({
-      id: weeklyTaskId,
-      text: schedule.name,
-      status: 'active',
-      drillId: null,
-      category: schedule.category || 'ならいごと',
-      description: schedule.description || '',
-      date: yesterdayDateStr,
-      isYesterday: true
-    });
   });
 
   return simulatedTasks;
