@@ -4434,19 +4434,26 @@ function getYesterdaySimulatedTasks() {
     if (drill.days && !drill.days.includes(yesterdayDay)) return;
     if (completedTaskKeys.has(`drill_${drill.id}`)) return;
 
-    let startPageVal = (drill.currentProgress || 0) + 1;
-    let startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+    let startPageVal = 0;
+    let endPageVal = 0;
+    let startQuestionVal = 0;
+    let endQuestionVal = 0;
     
-    // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
-    const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
-    if (completedToday) {
-      const histToday = history.find(h => h.id === completedToday.id);
-      if (histToday && histToday.amount > 0) {
-        if (drill.totalPages > 0) {
-          startPageVal = Math.max(1, startPageVal - histToday.amount);
-        }
-        if (drill.totalQuestions > 0) {
-          startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+    if (drill.type !== 'time') {
+      startPageVal = (drill.currentProgress || 0) + 1;
+      startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+      
+      // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
+      const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
+      if (completedToday) {
+        const histToday = history.find(h => h.id === completedToday.id);
+        if (histToday && histToday.amount > 0) {
+          if (drill.totalPages > 0) {
+            startPageVal = Math.max(1, startPageVal - histToday.amount);
+          }
+          if (drill.totalQuestions > 0) {
+            startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+          }
         }
       }
     }
@@ -4470,14 +4477,12 @@ function getYesterdaySimulatedTasks() {
       drillTaskId = `drill_${drill.id}_time_yesterday`;
     } else {
       let pageText = "";
-      let endPageVal = 0;
       if (drill.totalPages > 0) {
         const tomorrowPages = drill.dailyAmount;
         endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
         pageText = `P:${startPageVal}〜${endPageVal}`;
       }
       let questionText = "";
-      let endQuestionVal = 0;
       if (drill.totalQuestions > 0) {
         const tomorrowQs = drill.dailyQuestionAmount;
         endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
