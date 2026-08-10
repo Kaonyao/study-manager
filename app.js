@@ -680,26 +680,39 @@ function loadCloudData() {
   });
 }
 
-// 既存のローカルデータのクラウドへの移行（引き継ぎ）
+// 既存のローカルデータのクラウドへの移行（引き継ぎ）- ブロッキングconfirm()を完全排除して自動で非同期に実行
 async function checkAndMigrateLocalData() {
   // ローカルにデータが存在するかチェック
   const hasLocalTasks = storage.getItem(getUserKey('tasks'));
   const hasLocalDrills = storage.getItem(getUserKey('drills'));
   if (!hasLocalTasks && !hasLocalDrills) return;
 
-  const confirmMigration = confirm(
-    "この端末に保存されているこれまでの学習データを、新しく作成したオンラインアカウントに引き継ぎますか？\n\n※「はい」を選ぶと、現在のデータがクラウドに保存され、別の端末からでも見られるようになります。"
-  );
-
-  if (confirmMigration) {
-    try {
-      loadData(); // ローカルから現在データをメモリに読み込み
-      await saveAllDataToCloud(); // クラウドへ一括アップロード
-      showGameToast("データの引き継ぎが完了しました！☁️", "💮");
-    } catch (e) {
-      console.error("[Migration] Migration failed:", e);
-      showGameToast("引き継ぎに失敗しました。", "⚠️");
-    }
+  console.log("[Migration] Automatically migrating local data to cloud account (no-blocking)...");
+  try {
+    loadData(); // ローカルから現在データをメモリに読み込み
+    // クラウドへアップロード (firebase-safe)
+    const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
+    const payload = {
+      gameState: {
+        currentUser: gameState.currentUser,
+        users: gameState.users,
+        userProfile: gameState.userProfile,
+        allCompletedDates: gameState.allCompletedDates || [],
+        weeklyReportMode: gameState.weeklyReportMode || 'thisWeek',
+        simulationMode: gameState.simulationMode || false
+      },
+      tasks: tasks,
+      drills: drills,
+      completedTasks: completedTasks,
+      history: history,
+      weeklySchedules: gameState.weeklySchedules || [],
+      mistakeRecords: gameState.mistakeRecords || [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await userDocRef.set(payload, { merge: true });
+    showGameToast("ローカルデータをクラウドに同期しました！☁️", "💮");
+  } catch (e) {
+    console.error("[Migration] Automatic migration failed:", e);
   }
 }
 
