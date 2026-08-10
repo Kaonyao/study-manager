@@ -455,6 +455,32 @@ function loadCloudData() {
             console.error("[Data Rescue System Error]", err);
           }
 
+          // 【超強力・ローカルドリル数優先復元エンジン】
+          // クラウド側のドリル数より、ローカルに記憶されているドリル数の方が多い場合、
+          // オンラインの空（またはデフォルト）のドリルデータでローカルが上書き破壊されるのを徹底防止し、オンラインへ復旧させます。
+          try {
+            const hasLocalDrills = storage.getItem(getUserKey('drills'));
+            const localDrills = (hasLocalDrills && hasLocalDrills !== '[]') ? (JSON.parse(hasLocalDrills) || []) : [];
+            const cloudDrillsCount = data.drills ? data.drills.length : 0;
+
+            if (localDrills.length > cloudDrillsCount) {
+              const confirmRescue = confirm(
+                `この端末に「${gameState.currentUser}」様の大切な学習データ（登録ドリル ${localDrills.length}件）が残っています！\n\nオンライン上の古いデータ（${cloudDrillsCount}件）を、この端末のデータで上書きして復旧させますか？`
+              );
+              if (confirmRescue) {
+                loadData(); // ローカルからロード
+                await saveAllDataToCloud(); // クラウドへ保存
+                saveLocalBackup();
+                showGameToast("データをオンラインに復旧しました！☁️", "💮");
+                cloudDataLoaded = true;
+                resolve();
+                return;
+              }
+            }
+          } catch (e) {
+            console.error("[Local Drills Rescue Error]", e);
+          }
+
           // 【強力な安全装置】
           // クラウドのデータが空（ドリルが0件）であり、かつローカルに既に学習データがある場合、
           // クラウドの空データでローカルを破壊するのを防ぐため、ローカルからクラウドへの移行確認を行います。
@@ -1466,10 +1492,18 @@ function generateDailyTasks(isNewDay = false) {
     try {
       if (schedule.drillId) {
         const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
-        if (!drill || drill.archived) return;
+        if (!drill) {
+          showGameToast(`スキップ [${schedule.name}]: ドリルがマスタにありません`, "ℹ️");
+          return;
+        }
+        if (drill.archived) {
+          showGameToast(`スキップ [${schedule.name}]: アーカイブされています`, "ℹ️");
+          return;
+        }
 
       // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
       if (completedDrillIdsToday.has(drill.id)) {
+        showGameToast(`スキップ [${schedule.name}]: 今日すでに完了しています`, "ℹ️");
         return;
       }
 
@@ -1488,6 +1522,7 @@ function generateDailyTasks(isNewDay = false) {
         }
       }
       if (isDrillFinished) {
+        showGameToast(`スキップ [${schedule.name}]: ドリル上限まで完了しています`, "ℹ️");
         return;
       }
 
