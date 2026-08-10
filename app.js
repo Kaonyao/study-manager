@@ -4417,16 +4417,159 @@ function getYesterdayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
+// 昨日のやることリストを動的にシミュレーション生成する内部ヘルパー (昨日アプリが開かれなかった場合用)
+function generateYesterdaySimulatedTasksFromSchedules() {
+  const yesterdayDay = getYesterdayDayName();
+  const yesterdayDateStr = getYesterdayDateString();
+  const todayDateStr = getTodayDateString();
+  
+  const yesterdaySchedules = gameState.weeklySchedules 
+    ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(yesterdayDay)) 
+    : [];
+
+  const simulatedTasks = [];
+  
+  // A. すでに昨日完了したタスク（completedTasks に入っているもの）は、そのまま status: 'completed' でリストに含める！
+  const yesterdayCompletedTasks = completedTasks.filter(t => t.completedDate === yesterdayDateStr || t.date === yesterdayDateStr);
+  yesterdayCompletedTasks.forEach(t => {
+    simulatedTasks.push({
+      ...t,
+      status: 'completed', // 確実に完了状態にする
+      isYesterday: true
+    });
+  });
+
+  // B. 昨日完了済みのドリルIDや予定名のSet（重複生成を避けるためのチェック用）
+  const completedTaskKeys = new Set(
+    yesterdayCompletedTasks.map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
+  );
+
+  // 1. ドリルタスクの昨日の分を生成
+  drills.filter(d => !d.archived).forEach(drill => {
+    if (drill.days && !drill.days.includes(yesterdayDay)) return;
+    if (completedTaskKeys.has(`drill_${drill.id}`)) return;
+
+    let startPageVal = 0;
+    let endPageVal = 0;
+    let startQuestionVal = 0;
+    let endQuestionVal = 0;
+    
+    if (drill.type !== 'time') {
+      startPageVal = (drill.currentProgress || 0) + 1;
+      startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+      
+      // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
+      const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
+      if (completedToday) {
+        const histToday = history.find(h => h.id === completedToday.id);
+        if (histToday && histToday.amount > 0) {
+          if (drill.totalPages > 0) {
+            startPageVal = Math.max(1, startPageVal - histToday.amount);
+          }
+          if (drill.totalQuestions > 0) {
+            startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+          }
+        }
+      }
+    }
+
+    let drillTaskId = "";
+    let taskText = "";
+    const emoji = getCategoryEmoji(drill.category);
+    let timingSuffix = "";
+    if (drill.timing === 'before_lesson') timingSuffix = " (予定のまえ)";
+    else if (drill.timing === 'after_lesson') timingSuffix = " (予定のあと)";
+    else if (drill.timing && drill.timing.startsWith('before_schedule:')) {
+      const lessonName = drill.timing.split(':')[1];
+      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のまえ)`;
+    } else if (drill.timing && drill.timing.startsWith('after_schedule:')) {
+      const lessonName = drill.timing.split(':')[1];
+      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のあと)`;
+    }
+
+    if (drill.type === 'time') {
+      taskText = `${emoji} ${drill.category}：${drill.name}（${drill.duration}分）`;
+      drillTaskId = `drill_${drill.id}_time_yesterday`;
+    } else {
+      let pageText = "";
+      if (drill.totalPages > 0) {
+        const tomorrowPages = drill.dailyAmount;
+        endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
+        pageText = `P:${startPageVal}〜${endPageVal}`;
+      }
+      let questionText = "";
+      if (drill.totalQuestions > 0) {
+        const tomorrowQs = drill.dailyQuestionAmount;
+        endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
+        questionText = `Q:${startQuestionVal}〜${endQuestionVal}`;
+      }
+      let rangeText = "";
+      if (pageText && questionText) {
+        rangeText = `（${pageText} / ${questionText}）`;
+      } else if (pageText) {
+        rangeText = `（${pageText}）`;
+      } else if (questionText) {
+        rangeText = `（${questionText}）`;
+      }
+      drillTaskId = `drill_${drill.id}_${startPageVal}_${endPageVal}_${startQuestionVal}_${endQuestionVal}_yesterday`;
+      taskText = `${emoji} ${drill.category}：${drill.name}${rangeText}`;
+    }
+    taskText += timingSuffix;
+
+    simulatedTasks.push({
+      id: drillTaskId,
+      text: taskText,
+      status: 'active',
+      drillId: drill.id,
+      startPage: startPageVal,
+      endPage: endPageVal,
+      startQuestion: startQuestionVal,
+      endQuestion: endQuestionVal,
+      category: drill.category || "べんきょう",
+      description: drill.description || "",
+      date: yesterdayDateStr,
+      isYesterday: true
+    });
+  });
+
+  // 2. 通常の時間割の昨日の分を生成
+  yesterdaySchedules.forEach(schedule => {
+    if (schedule.drillId) return;
+    if (completedTaskKeys.has(schedule.name.trim())) return;
+
+    const weeklyTaskId = `weekly_${schedule.id}_${yesterdayDateStr}`;
+    simulatedTasks.push({
+      id: weeklyTaskId,
+      text: schedule.name,
+      status: 'active',
+      drillId: null,
+      category: schedule.category || 'ならいごと',
+      description: schedule.description || '',
+      date: yesterdayDateStr,
+      isYesterday: true
+    });
+  });
+
+  return simulatedTasks;
+}
+
 // 昨日の本物のタスクリスト（および完了したタスク）を収集して表示用データを生成する
 function getYesterdaySimulatedTasks() {
   const yesterdayDateStr = getYesterdayDateString();
-  const simulatedTasks = [];
   
   // 1. tasks 配列の中から、実際に日付が昨日のタスク（未完了・完了・手動追加すべて）を抽出する
   const yesterdayTasksFromMemory = tasks.filter(t => 
     t.date === yesterdayDateStr && 
     t.status !== 'deleted'
   );
+  
+  // もし昨日分のタスクがメモリ上に1件もない場合（昨日アプリが開かれなかった場合）
+  if (yesterdayTasksFromMemory.length === 0) {
+    console.log("[Yesterday Mode] 昨日アプリが開かれなかったため、スケジュールから自動で昨日のタスクリストをシミュレーション生成します。");
+    return generateYesterdaySimulatedTasksFromSchedules();
+  }
+  
+  const simulatedTasks = [];
   
   yesterdayTasksFromMemory.forEach(t => {
     simulatedTasks.push({
