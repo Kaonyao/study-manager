@@ -481,8 +481,9 @@ function loadCloudData() {
 
     // onSnapshot リスナーを開始！
     cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
-      if (timeoutFired) return;
       clearTimeout(loadTimeout);
+      // タイムアウト後に遅れてデータが届いた場合でも、正常に同期状態へ復帰させる
+      timeoutFired = false;
 
       if (doc.exists) {
         const data = doc.data();
