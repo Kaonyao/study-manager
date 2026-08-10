@@ -375,9 +375,9 @@ function loadCloudData() {
     
     // onSnapshot リスナーを開始！
     cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
-      // 自分が送信した書き込み（PendingWrites）によるイベントはスルーしてループを防ぐ
-      if (doc.metadata.hasPendingWrites) {
-        resolve(); // 最初の読み込み時はresolveを通す
+      // 【超重要】初回ロードが完了した後に、自分が送信した書き込み（PendingWrites）によるイベントだけをスルーする！
+      if (cloudDataLoaded && doc.metadata.hasPendingWrites) {
+        resolve();
         return;
       }
 
