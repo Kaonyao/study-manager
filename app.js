@@ -145,13 +145,6 @@ function init() {
     console.error("loadData failed in init:", e);
   }
 
-  if (firebaseEnabled) {
-    setupAuthObserver();
-  } else {
-    // Firebaseが無効な場合は従来通りローカルモードで起動
-    startLocalMode();
-  }
-
   // 初期化中の部分エラーがあってもイベント登録と設定タブ描画は必ず実行する
   try {
     setupEventListeners();
@@ -177,6 +170,13 @@ function init() {
     console.error("renderSettingsTab failed in init:", e);
   }
 
+  // 【最重要】すべてのDOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
+  if (firebaseEnabled) {
+    setupAuthObserver();
+  } else {
+    // Firebaseが無効な場合は従来通りローカルモードで起動
+    startLocalMode();
+  }
 }
 
 // 従来のローカルモードでの初期化
