@@ -412,11 +412,7 @@ function loadCloudData() {
     
     // onSnapshot リスナーを開始！
     cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
-      // 【超重要】初回ロードが完了した後に、自分が送信した書き込み（PendingWrites）によるイベントだけをスルーする！
-      // ※初回ロード前は絶対にresolveを呼んで完了扱いにしてはいけません。
-      if (cloudDataLoaded && doc.metadata.hasPendingWrites) {
-        return;
-      }
+
 
       if (doc.exists) {
         const data = doc.data();
