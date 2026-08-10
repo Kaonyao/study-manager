@@ -1124,7 +1124,8 @@ function getCategoryEmoji(category) {
 
 function getScheduleEmojiByName(name) {
   if (!name) return "🎹";
-  const match = gameState.weeklySchedules.find(s => s.name === name);
+  if (!Array.isArray(gameState.weeklySchedules)) return "🎹";
+  const match = gameState.weeklySchedules.find(s => s && s.name === name);
   if (match) {
     return getCategoryEmoji(match.category);
   }
@@ -1650,6 +1651,7 @@ function generateDailyTasks(isNewDay = false) {
     }
   } catch (err) {
     console.error(`Error processing schedule task for ${schedule.name}:`, err);
+    showGameToast(`エラー [${schedule.name}]: ${err.message}`, "⚠️");
   }
 });
 
