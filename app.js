@@ -567,6 +567,7 @@ function loadCloudData() {
 
         // ログイン完了後および通常更新時は、リロードなしで画面を再描画（他端末での削除・変更を即時反映！）
         try {
+          cleanupHugeBase64MistakeImages();
           renderNewTaskDrillOptions();
           checkDateChange();
           repairTodayCompletedTasks();
@@ -582,6 +583,7 @@ function loadCloudData() {
           }
         } catch (e) {
           console.error("[Firestore Sync] Error refreshing UI:", e);
+          showGameToast(`同期描画エラー: ${e.message}`, "⚠️");
         }
         
         resolve();
@@ -1114,6 +1116,9 @@ function loadData() {
   } else {
     gameState.allCompletedDates = [];
   }
+
+  // 既存の巨大画像をクリーンアップして他端末との同期を復元
+  cleanupHugeBase64MistakeImages();
 }
 
 function saveUserProfile() {
@@ -1219,13 +1224,34 @@ function updateCloudIndicator() {
   if (currentFirebaseUser) {
     indicator.style.background = '#e2f0d9';
     indicator.style.color = '#385723';
-    text.textContent = 'オンライン同期中';
+    
+    // メールアドレスがあればそれを表示、なければUIDの末尾4文字を表示
+    const accountId = currentFirebaseUser.email || `ID: ${currentFirebaseUser.uid.substring(currentFirebaseUser.uid.length - 4)}`;
+    text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${accountId})</span>`;
     icon.textContent = '☁️';
   } else {
     indicator.style.background = '#fce8e6';
     indicator.style.color = '#c5221f';
     text.textContent = '同期オフ (ログインしてね)';
     icon.textContent = '⚠️';
+  }
+}
+
+// 既存の肥大化したBase64画像データをクリーンアップして他端末との同期を復旧させるレスキューエンジン
+function cleanupHugeBase64MistakeImages() {
+  let updated = false;
+  if (gameState && Array.isArray(gameState.mistakeRecords)) {
+    gameState.mistakeRecords.forEach(rec => {
+      if (rec && rec.imageUrl && rec.imageUrl.toString().startsWith('data:image')) {
+        console.warn("[Cleanup Engine] 巨大なBase64画像を検出。容量制限超過を防ぐためにクリーンアップします。:", rec.id);
+        rec.imageUrl = null; // 容量超過を防ぐためにBase64画像データを空にする
+        updated = true;
+      }
+    });
+  }
+  if (updated) {
+    storage.setItem(getUserKey('mistake_records'), JSON.stringify(gameState.mistakeRecords));
+    console.log("[Cleanup Engine] 既存の巨大画像をすべてクリーンアップし、同期容量を安全値に軽量化しました。");
   }
 }
 
@@ -4211,11 +4237,24 @@ function handleSubmitMistake(event) {
       localType = "読み間違い";
     }
     
-    // Storageを使わず、Base64文字列のまま直接Firestoreに保存
-    const imageUrl = gameState.currentCheckingImage;
-    
-    addMistakeRecord(drillName, finalMistakeText, localType, imageUrl, "pending");
-    showGameToast("間違いをアルバムに記録しました。📷", "📝");
+    // Firebase Storage が有効なら画像をアップロードしてURLを取得
+    const base64Image = gameState.currentCheckingImage;
+    if (base64Image && firebaseEnabled && currentFirebaseUser) {
+      showGameToast("画像をアップロードしています...", "📷");
+      const filename = `mistake_${Date.now()}`;
+      uploadImageToStorage(base64Image, filename).then(uploadedUrl => {
+        const finalUrl = uploadedUrl || base64Image; // 失敗時はBase64フォールバック
+        addMistakeRecord(drillName, finalMistakeText, localType, finalUrl, "pending");
+        showGameToast("間違いをアルバムに記録しました。📷", "📝");
+      }).catch(err => {
+        console.error("Storage upload failed, falling back to Base64:", err);
+        addMistakeRecord(drillName, finalMistakeText, localType, base64Image, "pending");
+        showGameToast("間違いをアルバムに記録しました。📷", "📝");
+      });
+    } else {
+      addMistakeRecord(drillName, finalMistakeText, localType, base64Image, "pending");
+      showGameToast("間違いをアルバムに記録しました。📷", "📝");
+    }
   }
   closeCheckAnswerModal();
 }
