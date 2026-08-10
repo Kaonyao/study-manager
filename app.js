@@ -370,6 +370,7 @@ function saveAllDataToCloud() {
 
   saveToCloudTimeout = setTimeout(async () => {
     try {
+      showGameToast("クラウドへデータを保存中... ☁️", "ℹ️");
       const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
       const payload = {
         gameState: {
@@ -389,10 +390,11 @@ function saveAllDataToCloud() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       await userDocRef.set(payload, { merge: true });
+      showGameToast("クラウドへの保存が完了しました！✨", "☁️");
       console.log("[Firestore] Data successfully saved to cloud (debounced).");
     } catch (e) {
       console.error("[Firestore] Save failed:", e);
-      showGameToast("同期に失敗しました。", "⚠️");
+      showGameToast(`同期に失敗しました: ${e.message}`, "⚠️");
     }
   }, 300);
 }
@@ -1222,8 +1224,9 @@ function updateCloudIndicator() {
     indicator.style.color = '#385723';
     
     // メールアドレスがあればそれを表示、なければUIDの末尾4文字を表示
-    const accountId = currentFirebaseUser.email || `ID: ${currentFirebaseUser.uid.substring(currentFirebaseUser.uid.length - 4)}`;
-    text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${accountId})</span>`;
+    const emailStr = currentFirebaseUser.email || "メールなし";
+    const uidTail = currentFirebaseUser.uid.substring(currentFirebaseUser.uid.length - 4);
+    text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
     icon.textContent = '☁️';
   } else {
     indicator.style.background = '#fce8e6';
