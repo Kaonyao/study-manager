@@ -1507,39 +1507,30 @@ function generateDailyTasks(isNewDay = false) {
     try {
       if (schedule.drillId) {
         const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
-        if (!drill) {
-          showGameToast(`スキップ [${schedule.name}]: ドリルがマスタにありません`, "ℹ️");
+        if (!drill || drill.archived) return;
+
+        // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
+        if (completedDrillIdsToday.has(drill.id.toString())) {
           return;
         }
-        if (drill.archived) {
-          showGameToast(`スキップ [${schedule.name}]: アーカイブされています`, "ℹ️");
+
+        activeDrillIdsToday.add(drill.id.toString());
+
+        let isDrillFinished = false;
+        if (drill.type !== 'time') {
+          const hasPageLimit = drill.totalPages > 0;
+          const hasQuestionLimit = drill.totalQuestions > 0;
+          if (hasPageLimit && hasQuestionLimit) {
+            isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages && (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
+          } else if (hasPageLimit) {
+            isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages;
+          } else if (hasQuestionLimit) {
+            isDrillFinished = (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
+          }
+        }
+        if (isDrillFinished) {
           return;
         }
-
-      // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
-      if (completedDrillIdsToday.has(drill.id.toString())) {
-        showGameToast(`スキップ [${schedule.name}]: 今日すでに完了しています`, "ℹ️");
-        return;
-      }
-
-      activeDrillIdsToday.add(drill.id.toString());
-
-      let isDrillFinished = false;
-      if (drill.type !== 'time') {
-        const hasPageLimit = drill.totalPages > 0;
-        const hasQuestionLimit = drill.totalQuestions > 0;
-        if (hasPageLimit && hasQuestionLimit) {
-          isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages && (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
-        } else if (hasPageLimit) {
-          isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages;
-        } else if (hasQuestionLimit) {
-          isDrillFinished = (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
-        }
-      }
-      if (isDrillFinished) {
-        showGameToast(`スキップ [${schedule.name}]: ドリル上限まで完了しています`, "ℹ️");
-        return;
-      }
 
       let drillTaskId = "";
       let taskText = "";
