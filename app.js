@@ -1415,7 +1415,12 @@ function repairTodayCompletedTasks() {
 
 // 今日のタスクを自動生成
 function generateDailyTasks(isNewDay = false) {
-  repairTodayCompletedTasks();
+  try {
+    repairTodayCompletedTasks();
+  } catch (e) {
+    console.error("repairTodayCompletedTasks failed in generateDailyTasks:", e);
+  }
+
   const todayDay = getTodayDayName();
   const todayDateStr = getTodayDateString();
   const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
@@ -1423,35 +1428,44 @@ function generateDailyTasks(isNewDay = false) {
   let updated = false;
 
   // 今日すでに完了（completed）しているドリルを一覧化
-  const completedDrillIdsToday = new Set(
-    tasks.filter(t => t.date === todayDateStr && t.status === 'completed' && t.drillId).map(t => t.drillId)
-  );
+  const completedDrillIdsToday = new Set();
+  if (Array.isArray(tasks)) {
+    tasks.forEach(t => {
+      if (t && t.date === todayDateStr && t.status === 'completed' && t.drillId) {
+        completedDrillIdsToday.add(t.drillId);
+      }
+    });
+  }
 
   // 今日の未完了スケジュールタスクを一旦削除して再生成（すでに同日完了しているドリルの未達成誤生成タスクも削除）
-  const originalTaskCountForCleanup = tasks.length;
-  tasks = tasks.filter(t => {
-    // 今日すでに完了しているドリルの未達成タスクが残っていれば排除
-    if (t.date === todayDateStr && t.status === 'active' && t.drillId && completedDrillIdsToday.has(t.drillId)) {
-      return false;
+  if (Array.isArray(tasks)) {
+    const originalTaskCountForCleanup = tasks.length;
+    tasks = tasks.filter(t => {
+      if (!t) return false;
+      // 今日すでに完了しているドリルの未達成タスクが残っていれば排除
+      if (t.date === todayDateStr && t.status === 'active' && t.drillId && completedDrillIdsToday.has(t.drillId)) {
+        return false;
+      }
+      if (t.date && t.date !== todayDateStr) return true;
+      if (t.isManual) return true; // 手動追加されたタスクは自動削除・再生成しない
+      if (t.status === 'completed' || t.status === 'postponed' || t.status === 'deleted') return true; // 完了・延期・削除済みのタスクは残す
+      const isDrill = t.drillId !== null && t.drillId !== undefined;
+      const isWeekly = t.id && t.id.toString().startsWith('weekly_');
+      return !(isDrill || isWeekly);
+    });
+    if (tasks.length !== originalTaskCountForCleanup) {
+      updated = true;
     }
-    if (t.date && t.date !== todayDateStr) return true;
-    if (t.isManual) return true; // 手動追加されたタスクは自動削除・再生成しない
-    if (t.status === 'completed' || t.status === 'postponed' || t.status === 'deleted') return true; // 完了・延期・削除済みのタスクは残す
-    const isDrill = t.drillId !== null && t.drillId !== undefined;
-    const isWeekly = t.id && t.id.toString().startsWith('weekly_');
-    return !(isDrill || isWeekly);
-  });
-  if (tasks.length !== originalTaskCountForCleanup) {
-    updated = true;
   }
 
   const activeDrillIdsToday = new Set();
   const activeWeeklyTaskIdsToday = new Set();
 
   todaySchedules.forEach(schedule => {
-    if (schedule.drillId) {
-      const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
-      if (!drill || drill.archived) return;
+    try {
+      if (schedule.drillId) {
+        const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
+        if (!drill || drill.archived) return;
 
       // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
       if (completedDrillIdsToday.has(drill.id)) {
@@ -1633,11 +1647,14 @@ function generateDailyTasks(isNewDay = false) {
         });
         updated = true;
       }
+    } catch (err) {
+      console.error(`Error processing schedule task for ${schedule.name}:`, err);
     }
   });
 
   const originalTaskCount = tasks.length;
   tasks = tasks.filter(task => {
+    if (!task) return false;
     if (task.date && task.date !== todayDateStr) {
       return true;
     }
@@ -1993,6 +2010,7 @@ function applyNextDayProgress() {
   const yesterdayStr = getYesterdayDateString();
   
   tasks = tasks.filter(task => {
+    if (!task) return false;
     // 削除されたものは物理的に消去する
     if (task.status === 'deleted') {
       return false;
@@ -2070,40 +2088,7 @@ function renderTasks() {
     }
   }
 
-  // 【デバッグ用】今日のタスクが生成されない原因を調べるため、一時的に情報を画面に表示
-  try {
-    const debugInfoDiv = document.getElementById('debug-tasks-info');
-    if (debugInfoDiv) debugInfoDiv.remove();
-    
-    const todayDay = getTodayDayName();
-    const todayDateStr = getTodayDateString();
-    const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
-    
-    const todayTasks = tasks.filter(t => t.date === todayDateStr);
-    
-    const newDebugDiv = document.createElement('div');
-    newDebugDiv.id = 'debug-tasks-info';
-    newDebugDiv.style.background = '#f8d7da';
-    newDebugDiv.style.color = '#721c24';
-    newDebugDiv.style.padding = '10px';
-    newDebugDiv.style.fontSize = '11px';
-    newDebugDiv.style.borderRadius = '5px';
-    newDebugDiv.style.marginBottom = '10px';
-    newDebugDiv.style.border = '1px solid #f5c6cb';
-    
-    let infoText = `<strong>🔍 デバッグ情報:</strong><br>`;
-    infoText += `・今日の曜日: ${todayDay} / 今日の日付: ${todayDateStr}<br>`;
-    infoText += `・今日の時間割の数: ${todaySchedules.length}件 (お名前: ${todaySchedules.map(s => s.name).join(', ') || 'なし'})<br>`;
-    infoText += `・今日のtasksの全件数: ${todayTasks.length}件<br>`;
-    todayTasks.forEach((t, idx) => {
-      infoText += `--- [${idx+1}] ID: ${t.id} / テキスト: ${t.text} / 状態: ${t.status} / ドリルID: ${t.drillId}<br>`;
-    });
-    
-    newDebugDiv.innerHTML = infoText;
-    taskListEl.parentNode.insertBefore(newDebugDiv, taskListEl);
-  } catch (e) {
-    console.error("Debug tasks display failed:", e);
-  }
+
 
   taskListEl.innerHTML = '';
   
