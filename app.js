@@ -182,6 +182,7 @@ function init() {
   }
 
   // 【最重要】すべてのDOM of DOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
+  updateCloudIndicator();
   if (firebaseEnabled) {
     setupAuthObserver();
   } else {
@@ -257,6 +258,9 @@ function setupAuthObserver() {
     if (user) {
       currentFirebaseUser = user;
       
+      currentFirebaseUser = user;
+      updateCloudIndicator();
+      
       if (cloudUserEmail) cloudUserEmail.textContent = user.email;
       if (cloudStatusSection) cloudStatusSection.style.display = 'block';
       if (authContainer) {
@@ -326,6 +330,7 @@ function setupAuthObserver() {
       }
     } else {
       currentFirebaseUser = null;
+      updateCloudIndicator();
       if (cloudStatusSection) cloudStatusSection.style.display = 'none';
 
       console.log("[Firebase Auth] skip_login value:", sessionStorage.getItem('skip_login'));
@@ -571,6 +576,9 @@ function loadCloudData() {
           updateUI();
           if (typeof renderCalendar === 'function') {
             renderCalendar();
+          }
+          if (cloudDataLoaded) {
+            showGameToast("最新のデータをクラウドから受信しました！☁️", "ℹ️");
           }
         } catch (e) {
           console.error("[Firestore Sync] Error refreshing UI:", e);
@@ -1190,6 +1198,35 @@ function getTodayDayName() {
 function getTodayDateString() {
   const d = new Date();
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+}
+
+// ☁️ クラウド同期ステータス表示の更新
+function updateCloudIndicator() {
+  const indicator = document.getElementById('header-cloud-indicator');
+  const icon = document.getElementById('header-cloud-icon');
+  const text = document.getElementById('header-cloud-text');
+  
+  if (!indicator || !icon || !text) return;
+  
+  if (!firebaseEnabled) {
+    indicator.style.background = '#fce8e6';
+    indicator.style.color = '#c5221f';
+    text.textContent = '同期オフ (ゲスト)';
+    icon.textContent = '⚠️';
+    return;
+  }
+  
+  if (currentFirebaseUser) {
+    indicator.style.background = '#e2f0d9';
+    indicator.style.color = '#385723';
+    text.textContent = 'オンライン同期中';
+    icon.textContent = '☁️';
+  } else {
+    indicator.style.background = '#fce8e6';
+    indicator.style.color = '#c5221f';
+    text.textContent = '同期オフ (ログインしてね)';
+    icon.textContent = '⚠️';
+  }
 }
 
 // タスクID（weekly_weekly_s_xxx_YYYY-MM-DDなど）から元の時間割予定IDを安全に復元するヘルパー
@@ -2383,6 +2420,28 @@ function setupEventListeners() {
         });
         tabBtn.classList.add('active');
         renderTasks();
+      }
+    });
+  }
+  
+  // クラウド同期インジケータのクリック動作
+  const headerCloudIndicator = document.getElementById('header-cloud-indicator');
+  if (headerCloudIndicator) {
+    headerCloudIndicator.addEventListener('click', () => {
+      if (firebaseEnabled && currentFirebaseUser) {
+        // ログイン中の場合は設定タブのデータ管理を開く
+        const tabBtnData = document.querySelector('.tab-btn[data-tab="settings-tab"]');
+        if (tabBtnData) {
+          tabBtnData.click();
+          switchSettingsSubTab('sub-tab-data');
+        }
+      } else {
+        // ゲストモードの場合はログイン画面を開く
+        const authContainer = document.getElementById('auth-container');
+        if (authContainer) {
+          authContainer.style.display = 'flex';
+          authContainer.classList.add('active');
+        }
       }
     });
   }

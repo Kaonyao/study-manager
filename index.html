@@ -32,12 +32,18 @@
     
     <!-- 1. ヘッダー：ユーザー情報、日付、タスク進捗率 -->
     <header class="app-header">
-      <div class="header-top">
+      <div class="header-top" style="flex-wrap: wrap; gap: 6px;">
         <div class="user-info">
           <span class="user-badge">👤 <span id="current-user-name">ユーザー</span></span>
-          <button type="button" id="btn-user-switch" class="btn-user-switch" title="ユーザーを切り替える">🔁 切り替え</button>
-          <button type="button" id="btn-user-edit" class="btn-user-switch btn-edit-profile" title="プロフィールを編集する">✏️ 編集</button>
+          <button type="button" id="btn-user-switch" class="btn-user-switch" title="ユーザーを切り替える">🔁</button>
+          <button type="button" id="btn-user-edit" class="btn-user-switch btn-edit-profile" title="プロフィールを編集する">✏️</button>
         </div>
+        
+        <!-- ☁️ クラウド同期インジケータ (ヘッダーの目立つ位置に追加) -->
+        <div id="header-cloud-indicator" style="font-size: 0.7rem; font-weight: 700; padding: 4px 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 3px; background: #e9ecef; color: var(--color-text-light); transition: all 0.2s;">
+          <span id="header-cloud-icon">☁️</span> <span id="header-cloud-text">読込中...</span>
+        </div>
+        
         <div class="date-info">
           <span id="today-date">2026年7月16日</span>
         </div>
