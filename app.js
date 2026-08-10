@@ -414,11 +414,25 @@ function loadCloudData() {
   return new Promise(async (resolve, reject) => {
     const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
     
+    // ⏰ 3秒のタイムアウト安全装置 (Firestoreが沈黙してロード未完了のまま操作不能になるのを防ぐ)
+    let timeoutFired = false;
+    const loadTimeout = setTimeout(() => {
+      timeoutFired = true;
+      console.warn("[Firestore] Sync timeout reached. Switching to local-active sync mode.");
+      showGameToast("同期接続を待機しています。ローカルデータで操作可能です。☁️", "⚠️");
+      cloudDataLoaded = true;
+      updateCloudIndicator();
+      resolve(); // フリーズを強制突破！
+    }, 3000);
+    
     // 【超強力フェールセーフ】onSnapshotの接続遅延やオフラインキャッシュの沈黙を回避するため、
     // まず一回 get() を投げて初期データを即時ロードする！
     try {
       console.log("[Firestore] Fetching initial data via get()...");
       const docSnap = await userDocRef.get();
+      if (timeoutFired) return;
+      clearTimeout(loadTimeout);
+      
       if (docSnap.exists) {
         const data = docSnap.data();
         console.log("[Firestore] Initial get() success.");
@@ -468,7 +482,8 @@ function loadCloudData() {
 
     // onSnapshot リスナーを開始！
     cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
-
+      if (timeoutFired) return;
+      clearTimeout(loadTimeout);
 
       if (doc.exists) {
         const data = doc.data();
