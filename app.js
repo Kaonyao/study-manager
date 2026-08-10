@@ -253,7 +253,7 @@ function setupAuthObserver() {
 
   console.log("[Firebase Auth] Setting up observer. authContainer exists:", !!authContainer);
 
-  authInstance.onAuthStateChanged(async (user) => {
+  authInstance.onAuthStateChanged((user) => {
     console.log("[Firebase Auth] Auth state changed. User:", user ? user.email : "null");
     if (user) {
       currentFirebaseUser = user;
@@ -268,14 +268,13 @@ function setupAuthObserver() {
         authContainer.style.display = 'none';
       }
 
-      // クラウドデータの読み込み (失敗してもローカルデータで強制的に立ち上げる安全設計)
+      // クラウドデータの読み込み (awaitせずバックグラウンドで開始し、起動シーケンスのハングを防ぐ)
       showGameToast("データを同期しています...", "☁️");
-      try {
-        await loadCloudData();
+      loadCloudData().then(() => {
         updateCloudIndicator();
-      } catch (err) {
+      }).catch(err => {
         console.error("loadCloudData failed during startup sync:", err);
-      }
+      });
       
       // アプリ画面の更新 (各処理を個別try-catchで囲み、iPad等でのデータ整合性エラーに巻き込まれるのを防止)
       gameState.simulationMode = false;
