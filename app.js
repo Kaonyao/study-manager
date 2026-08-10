@@ -3397,16 +3397,14 @@ async function deleteWeeklySchedule(dayOrId, targetId) {
       gameState.weeklySchedules = gameState.weeklySchedules.filter(s => s.id !== id);
       saveWeeklySchedule();
       
-      if (targetSchedule.days.includes(todayDay)) {
-        if (targetSchedule.drillId) {
-          tasks = tasks.filter(t => t.drillId !== targetSchedule.drillId);
-        } else {
-          const weeklyTaskId = `weekly_${id}_${todayDateStr}`;
-          tasks = tasks.filter(t => t.id !== weeklyTaskId);
-        }
-        saveTasks();
-        renderTasks();
+      if (targetSchedule.drillId) {
+        tasks = tasks.filter(t => t.drillId !== targetSchedule.drillId);
+      } else {
+        // 過去・未来問わず、このスケジュールIDに由来する週予定タスクを全て除外する
+        tasks = tasks.filter(t => !t.id || !t.id.toString().startsWith(`weekly_${id}_`));
       }
+      saveTasks();
+      renderTasks();
       
       renderRegisteredSchedulesList();
       updateDrillTimingSelectOptions();
@@ -4446,7 +4444,7 @@ function generateYesterdaySimulatedTasksFromSchedules() {
 
   // 1. ドリルタスクの昨日の分を生成
   drills.filter(d => !d.archived).forEach(drill => {
-    if (drill.days && !drill.days.includes(yesterdayDay)) return;
+    if (!drill.days || !Array.isArray(drill.days) || !drill.days.includes(yesterdayDay)) return;
     if (completedTaskKeys.has(`drill_${drill.id}`)) return;
 
     let startPageVal = 0;
