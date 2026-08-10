@@ -4442,110 +4442,111 @@ function generateYesterdaySimulatedTasksFromSchedules() {
     yesterdayCompletedTasks.map(t => t.drillId ? `drill_${t.drillId}` : (t.text ? t.text.trim() : ""))
   );
 
-  // 1. ドリルタスクの昨日の分を生成
-  drills.filter(d => !d.archived).forEach(drill => {
-    if (!drill.days || !Array.isArray(drill.days) || !drill.days.includes(yesterdayDay)) return;
-    if (completedTaskKeys.has(`drill_${drill.id}`)) return;
+  // 昨日の時間割スケジュールをベースにタスクを生成
+  yesterdaySchedules.forEach(schedule => {
+    if (schedule.drillId) {
+      // 1. ドリルに関連付けられたスケジュールの昨日の分を生成
+      const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
+      if (!drill || drill.archived) return;
+      if (completedTaskKeys.has(`drill_${drill.id}`)) return;
 
-    let startPageVal = 0;
-    let endPageVal = 0;
-    let startQuestionVal = 0;
-    let endQuestionVal = 0;
-    
-    if (drill.type !== 'time') {
-      startPageVal = (drill.currentProgress || 0) + 1;
-      startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+      let startPageVal = 0;
+      let endPageVal = 0;
+      let startQuestionVal = 0;
+      let endQuestionVal = 0;
       
-      // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
-      const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
-      if (completedToday) {
-        const histToday = history.find(h => h.id === completedToday.id);
-        if (histToday && histToday.amount > 0) {
-          if (drill.totalPages > 0) {
-            startPageVal = Math.max(1, startPageVal - histToday.amount);
-          }
-          if (drill.totalQuestions > 0) {
-            startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+      if (drill.type !== 'time') {
+        startPageVal = (drill.currentProgress || 0) + 1;
+        startQuestionVal = (drill.currentQuestionProgress || 0) + 1;
+        
+        // 今日すでに完了しているなら、昨日の時点ではその分だけ手前だったはず
+        const completedToday = completedTasks.find(t => t.drillId === drill.id && (t.completedDate === todayDateStr || t.date === todayDateStr));
+        if (completedToday) {
+          const histToday = history.find(h => h.id === completedToday.id);
+          if (histToday && histToday.amount > 0) {
+            if (drill.totalPages > 0) {
+              startPageVal = Math.max(1, startPageVal - histToday.amount);
+            }
+            if (drill.totalQuestions > 0) {
+              startQuestionVal = Math.max(1, startQuestionVal - histToday.amount);
+            }
           }
         }
       }
-    }
 
-    let drillTaskId = "";
-    let taskText = "";
-    const emoji = getCategoryEmoji(drill.category);
-    let timingSuffix = "";
-    if (drill.timing === 'before_lesson') timingSuffix = " (予定のまえ)";
-    else if (drill.timing === 'after_lesson') timingSuffix = " (予定のあと)";
-    else if (drill.timing && drill.timing.startsWith('before_schedule:')) {
-      const lessonName = drill.timing.split(':')[1];
-      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のまえ)`;
-    } else if (drill.timing && drill.timing.startsWith('after_schedule:')) {
-      const lessonName = drill.timing.split(':')[1];
-      timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のあと)`;
-    }
+      let drillTaskId = "";
+      let taskText = "";
+      const emoji = getCategoryEmoji(drill.category);
+      let timingSuffix = "";
+      if (drill.timing === 'before_lesson') timingSuffix = " (予定のまえ)";
+      else if (drill.timing === 'after_lesson') timingSuffix = " (予定のあと)";
+      else if (drill.timing && drill.timing.startsWith('before_schedule:')) {
+        const lessonName = drill.timing.split(':')[1];
+        timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のまえ)`;
+      } else if (drill.timing && drill.timing.startsWith('after_schedule:')) {
+        const lessonName = drill.timing.split(':')[1];
+        timingSuffix = ` (${getScheduleEmojiByName(lessonName)} ${lessonName}のあと)`;
+      }
 
-    if (drill.type === 'time') {
-      taskText = `${emoji} ${drill.category}：${drill.name}（${drill.duration}分）`;
-      drillTaskId = `drill_${drill.id}_time_yesterday`;
+      if (drill.type === 'time') {
+        taskText = `${emoji} ${drill.category}：${drill.name}（${drill.duration}分）`;
+        drillTaskId = `drill_${drill.id}_time_yesterday`;
+      } else {
+        let pageText = "";
+        if (drill.totalPages > 0) {
+          const tomorrowPages = drill.dailyAmount;
+          endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
+          pageText = `P:${startPageVal}〜${endPageVal}`;
+        }
+        let questionText = "";
+        if (drill.totalQuestions > 0) {
+          const tomorrowQs = drill.dailyQuestionAmount;
+          endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
+          questionText = `Q:${startQuestionVal}〜${endQuestionVal}`;
+        }
+        let rangeText = "";
+        if (pageText && questionText) {
+          rangeText = `（${pageText} / ${questionText}）`;
+        } else if (pageText) {
+          rangeText = `（${pageText}）`;
+        } else if (questionText) {
+          rangeText = `（${questionText}）`;
+        }
+        drillTaskId = `drill_${drill.id}_${startPageVal}_${endPageVal}_${startQuestionVal}_${endQuestionVal}_yesterday`;
+        taskText = `${emoji} ${drill.category}：${drill.name}${rangeText}`;
+      }
+      taskText += timingSuffix;
+
+      simulatedTasks.push({
+        id: drillTaskId,
+        text: taskText,
+        status: 'active',
+        drillId: drill.id,
+        startPage: startPageVal,
+        endPage: endPageVal,
+        startQuestion: startQuestionVal,
+        endQuestion: endQuestionVal,
+        category: drill.category || "べんきょう",
+        description: drill.description || "",
+        date: yesterdayDateStr,
+        isYesterday: true
+      });
     } else {
-      let pageText = "";
-      if (drill.totalPages > 0) {
-        const tomorrowPages = drill.dailyAmount;
-        endPageVal = Math.min(startPageVal + tomorrowPages - 1, drill.totalPages);
-        pageText = `P:${startPageVal}〜${endPageVal}`;
-      }
-      let questionText = "";
-      if (drill.totalQuestions > 0) {
-        const tomorrowQs = drill.dailyQuestionAmount;
-        endQuestionVal = Math.min(startQuestionVal + tomorrowQs - 1, drill.totalQuestions);
-        questionText = `Q:${startQuestionVal}〜${endQuestionVal}`;
-      }
-      let rangeText = "";
-      if (pageText && questionText) {
-        rangeText = `（${pageText} / ${questionText}）`;
-      } else if (pageText) {
-        rangeText = `（${pageText}）`;
-      } else if (questionText) {
-        rangeText = `（${questionText}）`;
-      }
-      drillTaskId = `drill_${drill.id}_${startPageVal}_${endPageVal}_${startQuestionVal}_${endQuestionVal}_yesterday`;
-      taskText = `${emoji} ${drill.category}：${drill.name}${rangeText}`;
+      // 2. 通常の時間割の予定（ピアノレッスン等）の昨日の分を生成
+      if (completedTaskKeys.has(schedule.name.trim())) return;
+
+      const weeklyTaskId = `weekly_${schedule.id}_${yesterdayDateStr}`;
+      simulatedTasks.push({
+        id: weeklyTaskId,
+        text: schedule.name,
+        status: 'active',
+        drillId: null,
+        category: schedule.category || 'ならいごと',
+        description: schedule.description || '',
+        date: yesterdayDateStr,
+        isYesterday: true
+      });
     }
-    taskText += timingSuffix;
-
-    simulatedTasks.push({
-      id: drillTaskId,
-      text: taskText,
-      status: 'active',
-      drillId: drill.id,
-      startPage: startPageVal,
-      endPage: endPageVal,
-      startQuestion: startQuestionVal,
-      endQuestion: endQuestionVal,
-      category: drill.category || "べんきょう",
-      description: drill.description || "",
-      date: yesterdayDateStr,
-      isYesterday: true
-    });
-  });
-
-  // 2. 通常の時間割の昨日の分を生成
-  yesterdaySchedules.forEach(schedule => {
-    if (schedule.drillId) return;
-    if (completedTaskKeys.has(schedule.name.trim())) return;
-
-    const weeklyTaskId = `weekly_${schedule.id}_${yesterdayDateStr}`;
-    simulatedTasks.push({
-      id: weeklyTaskId,
-      text: schedule.name,
-      status: 'active',
-      drillId: null,
-      category: schedule.category || 'ならいごと',
-      description: schedule.description || '',
-      date: yesterdayDateStr,
-      isYesterday: true
-    });
   });
 
   return simulatedTasks;
