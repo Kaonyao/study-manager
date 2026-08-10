@@ -411,9 +411,61 @@ function loadCloudData() {
     cloudDataUnsubscribe = null;
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
     
+    // 【超強力フェールセーフ】onSnapshotの接続遅延やオフラインキャッシュの沈黙を回避するため、
+    // まず一回 get() を投げて初期データを即時ロードする！
+    try {
+      console.log("[Firestore] Fetching initial data via get()...");
+      const docSnap = await userDocRef.get();
+      if (docSnap.exists) {
+        const data = docSnap.data();
+        console.log("[Firestore] Initial get() success.");
+        
+        if (data.tasks) tasks = data.tasks;
+        if (data.drills) drills = data.drills;
+        if (data.completedTasks) completedTasks = data.completedTasks;
+        if (data.history) history = data.history;
+        
+        if (data.gameState) {
+          if (data.gameState.currentUser) gameState.currentUser = data.gameState.currentUser;
+          if (data.gameState.users && data.gameState.users.length > 0) {
+            const mergedUsers = new Set([...gameState.users, ...data.gameState.users]);
+            gameState.users = Array.from(mergedUsers);
+          }
+          if (data.gameState.userProfile) gameState.userProfile = data.gameState.userProfile;
+          if (data.gameState.allCompletedDates) gameState.allCompletedDates = data.gameState.allCompletedDates;
+          if (data.gameState.weeklyReportMode) gameState.weeklyReportMode = data.gameState.weeklyReportMode;
+        }
+        if (data.weeklySchedules) gameState.weeklySchedules = data.weeklySchedules;
+        if (data.mistakeRecords) gameState.mistakeRecords = data.mistakeRecords;
+
+        saveLocalBackup();
+        cloudDataLoaded = true;
+
+        // 描画の即時更新 (get() 成功時)
+        try {
+          cleanupHugeBase64MistakeImages();
+          renderNewTaskDrillOptions();
+          checkDateChange();
+          repairTodayCompletedTasks();
+          generateDailyTasks();
+          renderTasks();
+          renderNigateBuster();
+          updateUI();
+          if (typeof renderCalendar === 'function') {
+            renderCalendar();
+          }
+        } catch (e) {
+          console.error("[Firestore get] Error refreshing UI:", e);
+        }
+      }
+    } catch (getErr) {
+      console.error("[Firestore] Initial get() failed:", getErr);
+      showGameToast(`初期ロード失敗: ${getErr.message}`, "⚠️");
+    }
+
     // onSnapshot リスナーを開始！
     cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
 
@@ -603,6 +655,7 @@ function loadCloudData() {
       }
     }, err => {
       console.error("[Firestore] Realtime sync error:", err);
+      showGameToast(`クラウド接続エラー: ${err.message}`, "⚠️");
       if (!cloudDataLoaded) {
         startLocalMode();
         cloudDataLoaded = true;
