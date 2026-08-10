@@ -1647,10 +1647,11 @@ function generateDailyTasks(isNewDay = false) {
         });
         updated = true;
       }
-    } catch (err) {
-      console.error(`Error processing schedule task for ${schedule.name}:`, err);
     }
-  });
+  } catch (err) {
+    console.error(`Error processing schedule task for ${schedule.name}:`, err);
+  }
+});
 
   const originalTaskCount = tasks.length;
   tasks = tasks.filter(task => {
