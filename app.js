@@ -469,7 +469,7 @@ function loadCloudData() {
               );
               if (confirmRescue) {
                 loadData(); // ローカルからロード
-                await saveAllDataToCloud(); // クラウドへ保存
+                saveAllDataToCloud(); // クラウドへ保存
                 saveLocalBackup();
                 showGameToast("データをオンラインに復旧しました！☁️", "💮");
                 cloudDataLoaded = true;
