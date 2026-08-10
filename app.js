@@ -2128,6 +2128,41 @@ function renderTasks() {
 
 
 
+  // 【デバッグ用】今日のタスクが生成されない原因を調べるため、一時的に詳細情報を画面に表示
+  try {
+    const debugInfoDiv = document.getElementById('debug-tasks-info');
+    if (debugInfoDiv) debugInfoDiv.remove();
+    
+    const todayDay = getTodayDayName();
+    const todayDateStr = getTodayDateString();
+    const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
+    
+    const todayTasks = tasks.filter(t => t && t.date === todayDateStr);
+    
+    const newDebugDiv = document.createElement('div');
+    newDebugDiv.id = 'debug-tasks-info';
+    newDebugDiv.style.background = '#f8d7da';
+    newDebugDiv.style.color = '#721c24';
+    newDebugDiv.style.padding = '10px';
+    newDebugDiv.style.fontSize = '11px';
+    newDebugDiv.style.borderRadius = '5px';
+    newDebugDiv.style.marginBottom = '10px';
+    newDebugDiv.style.border = '1px solid #f5c6cb';
+    newDebugDiv.style.textAlign = 'left';
+    
+    let infoText = `<strong>🔍 超詳細デバッグ情報:</strong><br>`;
+    infoText += `・今日の曜日: ${todayDay} / 日付: ${todayDateStr}<br>`;
+    infoText += `・登録ドリル数: ${drills.length}件 (お名前: ${drills.map(d => `${d.name}(ID:${d.id})`).join(', ') || 'なし'})<br>`;
+    infoText += `・今日の時間割数: ${todaySchedules.length}件 (紐づくドリルID: ${todaySchedules.map(s => `${s.name}(drillId:${s.drillId})`).join(', ') || 'なし'})<br>`;
+    infoText += `・今日の完了ドリルID: [${Array.from(tasks.filter(t => t && t.date === todayDateStr && t.status === 'completed' && t.drillId).map(t => t.drillId)).join(', ')}]<br>`;
+    infoText += `・今日のtasks全件: ${todayTasks.length}件 (お名前: ${todayTasks.map(t => `${t.text}(状態:${t.status})`).join(', ') || 'なし'})<br>`;
+    
+    newDebugDiv.innerHTML = infoText;
+    taskListEl.parentNode.insertBefore(newDebugDiv, taskListEl);
+  } catch (e) {
+    console.error("Debug tasks display failed:", e);
+  }
+
   taskListEl.innerHTML = '';
   
   if (gameState.simulationMode) {
