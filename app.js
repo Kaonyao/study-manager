@@ -170,7 +170,18 @@ function init() {
     console.error("renderSettingsTab failed in init:", e);
   }
 
-  // 【最重要】すべてのDOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
+  // 【超重要】Firebaseの同期完了を待たずに、まずローカルデータで今日のやることタスクを生成して描画する！
+  // これにより、起動直後に画面が白紙になるのを100%防ぎます。
+  try {
+    checkDateChange();
+    repairTodayCompletedTasks();
+    generateDailyTasks();
+    renderTasks();
+  } catch (e) {
+    console.error("Initial local tasks generation failed:", e);
+  }
+
+  // 【最重要】すべてのDOM of DOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
   if (firebaseEnabled) {
     setupAuthObserver();
   } else {
@@ -253,9 +264,13 @@ function setupAuthObserver() {
         authContainer.style.display = 'none';
       }
 
-      // クラウドデータの読み込み
+      // クラウドデータの読み込み (失敗してもローカルデータで強制的に立ち上げる安全設計)
       showGameToast("データを同期しています...", "☁️");
-      await loadCloudData();
+      try {
+        await loadCloudData();
+      } catch (err) {
+        console.error("loadCloudData failed during startup sync:", err);
+      }
       
       // アプリ画面の更新 (各処理を個別try-catchで囲み、iPad等でのデータ整合性エラーに巻き込まれるのを防止)
       gameState.simulationMode = false;
@@ -1442,22 +1457,6 @@ function repairTodayCompletedTasks() {
 
 // 今日のタスクを自動生成
 function generateDailyTasks(isNewDay = false) {
-  // デバッグ情報の初期化
-  window.generateDailyTasksDebug = {
-    lastRun: new Date().toLocaleTimeString(),
-    todaySchedulesCount: 0,
-    drillSchedulesCount: 0,
-    drillFoundCount: 0,
-    drillArchivedCount: 0,
-    completedSkipCount: 0,
-    finishedSkipCount: 0,
-    pushCount: 0,
-    existCount: 0,
-    filterBeforeCount: 0,
-    filterAfterCount: 0,
-    tasksAtEnd: []
-  };
-
   try {
     repairTodayCompletedTasks();
   } catch (e) {
@@ -1467,8 +1466,6 @@ function generateDailyTasks(isNewDay = false) {
   const todayDay = getTodayDayName();
   const todayDateStr = getTodayDateString();
   const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
-  
-  window.generateDailyTasksDebug.todaySchedulesCount = todaySchedules.length;
 
   let updated = false;
 
@@ -1509,22 +1506,18 @@ function generateDailyTasks(isNewDay = false) {
   todaySchedules.forEach(schedule => {
     try {
       if (schedule.drillId) {
-        window.generateDailyTasksDebug.drillSchedulesCount++;
         const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
         if (!drill) {
-          window.generateDailyTasksDebug.drillFoundCount++;
           showGameToast(`スキップ [${schedule.name}]: ドリルがマスタにありません`, "ℹ️");
           return;
         }
         if (drill.archived) {
-          window.generateDailyTasksDebug.drillArchivedCount++;
           showGameToast(`スキップ [${schedule.name}]: アーカイブされています`, "ℹ️");
           return;
         }
 
       // 【超重要】今日すでにこのドリルを達成完了している場合、翌日分の未達成タスクを今日誤生成しない！
       if (completedDrillIdsToday.has(drill.id.toString())) {
-        window.generateDailyTasksDebug.completedSkipCount++;
         showGameToast(`スキップ [${schedule.name}]: 今日すでに完了しています`, "ℹ️");
         return;
       }
@@ -1544,7 +1537,6 @@ function generateDailyTasks(isNewDay = false) {
         }
       }
       if (isDrillFinished) {
-        window.generateDailyTasksDebug.finishedSkipCount++;
         showGameToast(`スキップ [${schedule.name}]: ドリル上限まで完了しています`, "ℹ️");
         return;
       }
@@ -1634,7 +1626,6 @@ function generateDailyTasks(isNewDay = false) {
         (t.date === todayDateStr || (t.date === tomorrowDateStr && t.status === 'postponed'))
       );
       if (existIndex === -1) {
-        window.generateDailyTasksDebug.pushCount++;
         tasks.push({
           id: drillTaskId,
           text: taskText,
@@ -1650,7 +1641,6 @@ function generateDailyTasks(isNewDay = false) {
         });
         updated = true;
       } else {
-        window.generateDailyTasksDebug.existCount++;
         const existingTask = tasks[existIndex];
         if (existingTask.status === 'active') {
           existingTask.id = drillTaskId;
@@ -1715,8 +1705,6 @@ function generateDailyTasks(isNewDay = false) {
   }
 });
 
-  window.generateDailyTasksDebug.filterBeforeCount = tasks.length;
-
   const originalTaskCount = tasks.length;
   tasks = tasks.filter(task => {
     if (!task) return false;
@@ -1733,9 +1721,6 @@ function generateDailyTasks(isNewDay = false) {
     }
     return true;
   });
-
-  window.generateDailyTasksDebug.filterAfterCount = tasks.length;
-  window.generateDailyTasksDebug.tasksAtEnd = tasks.map(t => `${t.text}(ID:${t.id},状態:${t.status},日付:${t.date})`);
 
   if (tasks.length !== originalTaskCount) {
     updated = true;
@@ -2160,55 +2145,7 @@ function renderTasks() {
 
 
 
-  // 【デバッグ用】今日のタスクが生成されない原因を調べるため、一時的に詳細情報を画面に表示
-  try {
-    const debugInfoDiv = document.getElementById('debug-tasks-info');
-    if (debugInfoDiv) debugInfoDiv.remove();
-    
-    const dbg = window.generateDailyTasksDebug || {};
-    const todayDay = getTodayDayName();
-    const todayDateStr = getTodayDateString();
-    
-    const newDebugDiv = document.createElement('div');
-    newDebugDiv.id = 'debug-tasks-info';
-    newDebugDiv.style.background = '#e2f0d9';
-    newDebugDiv.style.color = '#385723';
-    newDebugDiv.style.padding = '10px';
-    newDebugDiv.style.fontSize = '11px';
-    newDebugDiv.style.borderRadius = '5px';
-    newDebugDiv.style.marginBottom = '10px';
-    newDebugDiv.style.border = '1px solid #c5e0b4';
-    newDebugDiv.style.textAlign = 'left';
-    
-    let infoText = `<strong>🔍 究極デバッグ情報:</strong><br>`;
-    infoText += `・最終生成実行時刻: ${dbg.lastRun || "実行なし"}<br>`;
-    infoText += `・今日の時間割の総数: ${dbg.todaySchedulesCount}件<br>`;
-    infoText += `・ループしたドリル数: ${dbg.drillSchedulesCount}件<br>`;
-    infoText += `・[スキップガードの記録]:<br>`;
-    infoText += `　- マスタにドリルなしスキップ: ${dbg.drillFoundCount}件<br>`;
-    infoText += `　- アーカイブスキップ: ${dbg.drillArchivedCount}件<br>`;
-    infoText += `　- 今日完了済みスキップ: ${dbg.completedSkipCount}件<br>`;
-    infoText += `　- ドリル上限終了スキップ: ${dbg.finishedSkipCount}件<br>`;
-    infoText += `・[タスクPushの記録]:<br>`;
-    infoText += `　- 新規Push件数: ${dbg.pushCount}件<br>`;
-    infoText += `　- 既存上書き更新件数: ${dbg.existCount}件<br>`;
-    infoText += `・[最終クリーンアップフィルタ]:<br>`;
-    infoText += `　- フィルタ前の全tasks数: ${dbg.filterBeforeCount}件<br>`;
-    infoText += `　- フィルタ後の全tasks数: ${dbg.filterAfterCount}件<br>`;
-    infoText += `・[最終結果tasks]:<br>`;
-    if (dbg.tasksAtEnd && dbg.tasksAtEnd.length > 0) {
-      dbg.tasksAtEnd.forEach((t, idx) => {
-        infoText += `　[${idx+1}] ${t}<br>`;
-      });
-    } else {
-      infoText += `　なし<br>`;
-    }
-    
-    newDebugDiv.innerHTML = infoText;
-    taskListEl.parentNode.insertBefore(newDebugDiv, taskListEl);
-  } catch (e) {
-    console.error("Debug tasks display failed:", e);
-  }
+
 
   taskListEl.innerHTML = '';
   
