@@ -348,39 +348,48 @@ function setupAuthObserver() {
   });
 }
 
-// Firebase データのクラウド一括保存
-async function saveAllDataToCloud() {
+let saveToCloudTimeout = null;
+
+// Firebase データのクラウド一括保存 (他端末との同期時に並行setによるデータ競合・上書き破壊を防ぐデバウンス処理付き)
+function saveAllDataToCloud() {
   if (!firebaseEnabled || !currentFirebaseUser) return;
   // 【最重要・安全装置】クラウドデータのロードがまだ完了していない場合は、絶対に上書き保存を行わない！
   if (!cloudDataLoaded) {
     console.warn("[Firestore Guard] クラウドデータの読み込みが完了する前に、自動保存による上書きが実行されそうになったためブロックしました。");
     return;
   }
-  try {
-    const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
-    const payload = {
-      gameState: {
-        currentUser: gameState.currentUser,
-        users: gameState.users,
-        userProfile: gameState.userProfile,
-        allCompletedDates: gameState.allCompletedDates || [],
-        weeklyReportMode: gameState.weeklyReportMode || 'thisWeek',
-        simulationMode: gameState.simulationMode || false
-      },
-      tasks: tasks,
-      drills: drills,
-      completedTasks: completedTasks,
-      history: history,
-      weeklySchedules: gameState.weeklySchedules || [],
-      mistakeRecords: gameState.mistakeRecords || [],
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    await userDocRef.set(payload, { merge: true });
-    console.log("[Firestore] Data successfully saved to cloud.");
-  } catch (e) {
-    console.error("[Firestore] Save failed:", e);
-    showGameToast("同期に失敗しました。", "⚠️");
+
+  if (saveToCloudTimeout) {
+    clearTimeout(saveToCloudTimeout);
   }
+
+  saveToCloudTimeout = setTimeout(async () => {
+    try {
+      const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
+      const payload = {
+        gameState: {
+          currentUser: gameState.currentUser,
+          users: gameState.users,
+          userProfile: gameState.userProfile,
+          allCompletedDates: gameState.allCompletedDates || [],
+          weeklyReportMode: gameState.weeklyReportMode || 'thisWeek',
+          simulationMode: gameState.simulationMode || false
+        },
+        tasks: tasks,
+        drills: drills,
+        completedTasks: completedTasks,
+        history: history,
+        weeklySchedules: gameState.weeklySchedules || [],
+        mistakeRecords: gameState.mistakeRecords || [],
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await userDocRef.set(payload, { merge: true });
+      console.log("[Firestore] Data successfully saved to cloud (debounced).");
+    } catch (e) {
+      console.error("[Firestore] Save failed:", e);
+      showGameToast("同期に失敗しました。", "⚠️");
+    }
+  }, 300);
 }
 
 // Firebase データのクラウド読み込み（リアルタイム同期対応）
