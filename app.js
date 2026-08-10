@@ -510,22 +510,20 @@ function loadCloudData() {
         saveLocalBackup();
         cloudDataLoaded = true;
 
-        // ログイン完了後の通常更新時は、リロードなしで画面を再描画（他端末での削除・変更を即時反映！）
-        if (!isInitialLoad) {
-          try {
-            renderNewTaskDrillOptions();
-            checkDateChange();
-            repairTodayCompletedTasks();
-            generateDailyTasks();
-            renderTasks();
-            renderNigateBuster();
-            updateUI();
-            if (typeof renderCalendar === 'function') {
-              renderCalendar();
-            }
-          } catch (e) {
-            console.error("[Firestore Sync] Error refreshing UI:", e);
+        // ログイン完了後および通常更新時は、リロードなしで画面を再描画（他端末での削除・変更を即時反映！）
+        try {
+          renderNewTaskDrillOptions();
+          checkDateChange();
+          repairTodayCompletedTasks();
+          generateDailyTasks();
+          renderTasks();
+          renderNigateBuster();
+          updateUI();
+          if (typeof renderCalendar === 'function') {
+            renderCalendar();
           }
+        } catch (e) {
+          console.error("[Firestore Sync] Error refreshing UI:", e);
         }
         
         resolve();
