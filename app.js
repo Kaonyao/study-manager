@@ -1460,9 +1460,19 @@ function generateDailyTasks(isNewDay = false) {
 
       activeDrillIdsToday.add(drill.id);
 
-      const isPageFinished = drill.totalPages > 0 && (drill.currentProgress || 0) >= drill.totalPages;
-      const isQuestionFinished = drill.totalQuestions > 0 && (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
-      if (drill.type !== 'time' && (drill.totalPages > 0 ? isPageFinished : true) && (drill.totalQuestions > 0 ? isQuestionFinished : true)) {
+      let isDrillFinished = false;
+      if (drill.type !== 'time') {
+        const hasPageLimit = drill.totalPages > 0;
+        const hasQuestionLimit = drill.totalQuestions > 0;
+        if (hasPageLimit && hasQuestionLimit) {
+          isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages && (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
+        } else if (hasPageLimit) {
+          isDrillFinished = (drill.currentProgress || 0) >= drill.totalPages;
+        } else if (hasQuestionLimit) {
+          isDrillFinished = (drill.currentQuestionProgress || 0) >= drill.totalQuestions;
+        }
+      }
+      if (isDrillFinished) {
         return;
       }
 
@@ -2058,6 +2068,41 @@ function renderTasks() {
       yesterdayBtn.style.color = 'var(--color-text-light)';
       yesterdayBtn.style.display = 'inline-block';
     }
+  }
+
+  // 【デバッグ用】今日のタスクが生成されない原因を調べるため、一時的に情報を画面に表示
+  try {
+    const debugInfoDiv = document.getElementById('debug-tasks-info');
+    if (debugInfoDiv) debugInfoDiv.remove();
+    
+    const todayDay = getTodayDayName();
+    const todayDateStr = getTodayDateString();
+    const todaySchedules = gameState.weeklySchedules ? gameState.weeklySchedules.filter(s => s && s.days && Array.isArray(s.days) && s.days.includes(todayDay)) : [];
+    
+    const todayTasks = tasks.filter(t => t.date === todayDateStr);
+    
+    const newDebugDiv = document.createElement('div');
+    newDebugDiv.id = 'debug-tasks-info';
+    newDebugDiv.style.background = '#f8d7da';
+    newDebugDiv.style.color = '#721c24';
+    newDebugDiv.style.padding = '10px';
+    newDebugDiv.style.fontSize = '11px';
+    newDebugDiv.style.borderRadius = '5px';
+    newDebugDiv.style.marginBottom = '10px';
+    newDebugDiv.style.border = '1px solid #f5c6cb';
+    
+    let infoText = `<strong>🔍 デバッグ情報:</strong><br>`;
+    infoText += `・今日の曜日: ${todayDay} / 今日の日付: ${todayDateStr}<br>`;
+    infoText += `・今日の時間割の数: ${todaySchedules.length}件 (お名前: ${todaySchedules.map(s => s.name).join(', ') || 'なし'})<br>`;
+    infoText += `・今日のtasksの全件数: ${todayTasks.length}件<br>`;
+    todayTasks.forEach((t, idx) => {
+      infoText += `--- [${idx+1}] ID: ${t.id} / テキスト: ${t.text} / 状態: ${t.status} / ドリルID: ${t.drillId}<br>`;
+    });
+    
+    newDebugDiv.innerHTML = infoText;
+    taskListEl.parentNode.insertBefore(newDebugDiv, taskListEl);
+  } catch (e) {
+    console.error("Debug tasks display failed:", e);
   }
 
   taskListEl.innerHTML = '';
