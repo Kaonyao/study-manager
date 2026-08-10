@@ -360,133 +360,123 @@ async function saveAllDataToCloud() {
   }
 }
 
-// Firebase データのクラウド読み込み
-async function loadCloudData() {
-  if (!firebaseEnabled || !currentFirebaseUser) return;
-  try {
-    const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
-    const doc = await userDocRef.get();
-    if (doc.exists) {
-      const data = doc.data();
-      console.log("[Firestore] Loaded cloud data:", data);
-
-      // 【超強力な自動ローカルデータ救出エンジン】
-      // ログイン完了後、現在のクラウドデータが空（ドリルが0件）の場合、
-      // ログイン中のアカウント（UID）のキーに関わらず、このPCのLocalStorageに過去に保存された
-      // 「ドリルが1件以上登録されているユーザーデータ（例: study_rpg_u_たろう_drills）」を
-      // 強制スキャンして見つけ出し、移行（引き継ぎ）を提案します。
-      try {
-        const cloudDrillsCount = data.drills ? data.drills.length : 0;
-        if (cloudDrillsCount === 0) {
-          let foundUser = null;
-          let foundDrills = null;
-          
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith("study_rpg_u_") && key.endsWith("_drills")) {
-              const userName = key.substring("study_rpg_u_".length, key.length - "_drills".length);
-              if (userName !== "ユーザー" && userName !== "ゆうしゃ") {
-                const localDataStr = localStorage.getItem(key);
-                if (localDataStr && localDataStr !== '[]') {
-                  const parsedDrills = JSON.parse(localDataStr);
-                  if (parsedDrills && parsedDrills.length > 0) {
-                    foundUser = userName;
-                    foundDrills = parsedDrills;
-                    break;
-                  }
-                }
-              }
-            }
-          }
-          
-          if (foundUser && foundDrills) {
-            const confirmRescue = confirm(
-              `このパソコン内に、以前使用していた「${foundUser}」の大切な学習データが見つかりました！\n\nこのデータを現在ログイン中のアカウントに引き継いで、オンライン上に復活させますか？\n（『はい』を選ぶと、データが完全に復旧します）`
-            );
-            if (confirmRescue) {
-              gameState.currentUser = foundUser;
-              storage.setItem('study_rpg_current_user', foundUser);
-              
-              if (!gameState.users.includes(foundUser)) {
-                gameState.users.push(foundUser);
-                storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
-              }
-              
-              loadData();
-              await saveAllDataToCloud();
-              saveLocalBackup();
-              showGameToast("データを復活させました！☁️", "💮");
-              
-              window.location.reload();
-              return;
-            }
-          }
-        }
-      } catch (err) {
-        console.error("[Data Rescue System Error]", err);
-      }
-
-      // 【強力な安全装置】
-      // クラウドのデータが空（ドリルが0件）であり、かつローカルに既に学習データがある場合、
-      // クラウドの空データでローカルを破壊するのを防ぐため、ローカルからクラウドへの移行確認を行います。
-      try {
-        const hasLocalDrills = storage.getItem(getUserKey('drills'));
-        const localDrillsCount = (hasLocalDrills && hasLocalDrills !== '[]') ? (JSON.parse(hasLocalDrills) || []).length : 0;
-        const cloudDrillsCount = data.drills ? data.drills.length : 0;
-
-        if (cloudDrillsCount === 0 && localDrillsCount > 0) {
-          const confirmMigration = confirm(
-            "オンライン上に学習データが見つかりませんでしたが、この端末にこれまでのデータが残っています。\n\n端末のデータをオンラインにアップロード（引き継ぎ）して復元しますか？\n（『キャンセル』を選ぶと、オンラインの空データが優先されます）"
-          );
-          if (confirmMigration) {
-            loadData(); // ローカルからロード
-            await saveAllDataToCloud(); // クラウドへ保存
-            saveLocalBackup();
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("[Auth Guard Error]", err);
-      }
-      
-      // メモリ変数への反映
-      if (data.tasks) tasks = data.tasks;
-      if (data.drills) drills = data.drills;
-      if (data.completedTasks) completedTasks = data.completedTasks;
-      if (data.history) history = data.history;
-      
-      if (data.gameState) {
-        if (data.gameState.currentUser) gameState.currentUser = data.gameState.currentUser;
-        if (data.gameState.users) gameState.users = data.gameState.users;
-        if (data.gameState.userProfile) gameState.userProfile = data.gameState.userProfile;
-        if (data.gameState.allCompletedDates) gameState.allCompletedDates = data.gameState.allCompletedDates;
-        if (data.gameState.weeklyReportMode) gameState.weeklyReportMode = data.gameState.weeklyReportMode;
-        gameState.simulationMode = false;
-      }
-      if (data.weeklySchedules) gameState.weeklySchedules = data.weeklySchedules;
-      if (data.mistakeRecords) gameState.mistakeRecords = data.mistakeRecords;
-
-      // ログイン中ユーザー表示の更新
-      const currentUserEl = document.getElementById('current-user-name');
-      if (currentUserEl && gameState.currentUser) {
-        currentUserEl.textContent = gameState.currentUser;
-      }
-
-      // ローカルストレージにもバックアップとして保存
-      saveLocalBackup();
-      cloudDataLoaded = true; // ロード完了フラグをオン！
-    } else {
-      console.log("[Firestore] No cloud data found. This is a new user.");
-      // 既存のローカルデータがある場合は移行を提案
-      await checkAndMigrateLocalData();
-      cloudDataLoaded = true; // 新規ユーザーの場合もロード完了扱いに！
-    }
-  } catch (e) {
-    console.error("[Firestore] Load failed:", e);
-    showGameToast("同期データの読み込みに失敗しました。ローカルデータで起動します。", "⚠️");
-    startLocalMode();
-    cloudDataLoaded = true; // ローカル起動したためガードを解除！
+// Firebase データのクラウド読み込み（リアルタイム同期対応）
+function loadCloudData() {
+  if (!firebaseEnabled || !currentFirebaseUser) return Promise.resolve();
+  
+  // 既存のリスナーがあれば解除
+  if (cloudDataUnsubscribe) {
+    cloudDataUnsubscribe();
+    cloudDataUnsubscribe = null;
   }
+
+  return new Promise((resolve, reject) => {
+    const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
+    
+    // onSnapshot リスナーを開始！
+    cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
+      // 自分が送信した書き込み（PendingWrites）によるイベントはスルーしてループを防ぐ
+      if (doc.metadata.hasPendingWrites) {
+        resolve(); // 最初の読み込み時はresolveを通す
+        return;
+      }
+
+      if (doc.exists) {
+        const data = doc.data();
+        console.log("[Firestore Sync] Realtime cloud data update detected:", data);
+
+        const isInitialLoad = !cloudDataLoaded;
+
+        if (isInitialLoad) {
+          try {
+            const cloudDrillsCount = data.drills ? data.drills.length : 0;
+            const hasLocalDrills = storage.getItem(getUserKey('drills'));
+            const localDrillsCount = (hasLocalDrills && hasLocalDrills !== '[]') ? (JSON.parse(hasLocalDrills) || []).length : 0;
+            if (cloudDrillsCount === 0 && localDrillsCount > 0) {
+              const confirmMigration = confirm(
+                "オンライン上に学習データが見つかりませんでしたが、この端末にこれまでのデータが残っています。\n\n端末のデータをオンラインにアップロード（引き継ぎ）して復元しますか？\n（『キャンセル』を選ぶと、オンラインの空データが優先されます）"
+              );
+              if (confirmMigration) {
+                loadData();
+                saveAllDataToCloud();
+                saveLocalBackup();
+                resolve();
+                return;
+              }
+            }
+          } catch (err) {
+            console.error("[Auth Guard Error]", err);
+          }
+        }
+
+        // メモリ変数を最新のクラウドデータで更新！
+        if (data.tasks) tasks = data.tasks;
+        if (data.drills) drills = data.drills;
+        if (data.completedTasks) completedTasks = data.completedTasks;
+        if (data.history) history = data.history;
+        
+        if (data.gameState) {
+          if (data.gameState.currentUser) gameState.currentUser = data.gameState.currentUser;
+          if (data.gameState.users) gameState.users = data.gameState.users;
+          if (data.gameState.userProfile) gameState.userProfile = data.gameState.userProfile;
+          if (data.gameState.allCompletedDates) gameState.allCompletedDates = data.gameState.allCompletedDates;
+          if (data.gameState.weeklyReportMode) gameState.weeklyReportMode = data.gameState.weeklyReportMode;
+        }
+        if (data.weeklySchedules) gameState.weeklySchedules = data.weeklySchedules;
+        if (data.mistakeRecords) gameState.mistakeRecords = data.mistakeRecords;
+
+        // ログイン中ユーザー名の更新
+        const currentUserEl = document.getElementById('current-user-name');
+        if (currentUserEl && gameState.currentUser) {
+          currentUserEl.textContent = gameState.currentUser;
+        }
+
+        // ローカルにバックアップ
+        saveLocalBackup();
+        cloudDataLoaded = true;
+
+        // ログイン完了後の通常更新時は、リロードなしで画面を再描画（他端末での削除・変更を即時反映！）
+        if (!isInitialLoad) {
+          try {
+            renderNewTaskDrillOptions();
+            checkDateChange();
+            repairTodayCompletedTasks();
+            generateDailyTasks();
+            renderTasks();
+            renderNigateBuster();
+            updateUI();
+            if (typeof renderCalendar === 'function') {
+              renderCalendar();
+            }
+          } catch (e) {
+            console.error("[Firestore Sync] Error refreshing UI:", e);
+          }
+        }
+        
+        resolve();
+      } else {
+        console.log("[Firestore] No cloud data found.");
+        if (!cloudDataLoaded) {
+          checkAndMigrateLocalData().then(() => {
+            cloudDataLoaded = true;
+            resolve();
+          }).catch(err => {
+            cloudDataLoaded = true;
+            resolve();
+          });
+        } else {
+          resolve();
+        }
+      }
+    }, err => {
+      console.error("[Firestore] Realtime sync error:", err);
+      if (!cloudDataLoaded) {
+        startLocalMode();
+        cloudDataLoaded = true;
+      }
+      reject(err);
+    });
+  });
 }
 
 // 既存のローカルデータのクラウドへの移行（引き継ぎ）
