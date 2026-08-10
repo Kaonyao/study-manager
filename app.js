@@ -272,6 +272,7 @@ function setupAuthObserver() {
       showGameToast("データを同期しています...", "☁️");
       try {
         await loadCloudData();
+        updateCloudIndicator();
       } catch (err) {
         console.error("loadCloudData failed during startup sync:", err);
       }
@@ -361,6 +362,7 @@ function saveAllDataToCloud() {
   // 【最重要・安全装置】クラウドデータのロードがまだ完了していない場合は、絶対に上書き保存を行わない！
   if (!cloudDataLoaded) {
     console.warn("[Firestore Guard] クラウドデータの読み込みが完了する前に、自動保存による上書きが実行されそうになったためブロックしました。");
+    showGameToast("同期エラー: クラウド接続が完了していません (読込中)。もう一度タップしてください", "⚠️");
     return;
   }
 
@@ -1220,14 +1222,20 @@ function updateCloudIndicator() {
   }
   
   if (currentFirebaseUser) {
-    indicator.style.background = '#e2f0d9';
-    indicator.style.color = '#385723';
-    
-    // メールアドレスがあればそれを表示、なければUIDの末尾4文字を表示
     const emailStr = currentFirebaseUser.email || "メールなし";
     const uidTail = currentFirebaseUser.uid.substring(currentFirebaseUser.uid.length - 4);
-    text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
-    icon.textContent = '☁️';
+    
+    if (cloudDataLoaded) {
+      indicator.style.background = '#e2f0d9';
+      indicator.style.color = '#385723';
+      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
+      icon.textContent = '☁️';
+    } else {
+      indicator.style.background = '#fff3bf';
+      indicator.style.color = '#f59f00';
+      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
+      icon.textContent = '⌛';
+    }
   } else {
     indicator.style.background = '#fce8e6';
     indicator.style.color = '#c5221f';
