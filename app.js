@@ -169,6 +169,31 @@ function init() {
   } catch (e) {
     console.error("renderSettingsTab failed in init:", e);
   }
+  
+  try {
+    const debugDiv = document.createElement('div');
+    debugDiv.style.position = 'fixed';
+    debugDiv.style.bottom = '10px';
+    debugDiv.style.right = '10px';
+    debugDiv.style.background = 'rgba(0,0,0,0.85)';
+    debugDiv.style.color = '#fff';
+    debugDiv.style.padding = '10px';
+    debugDiv.style.fontSize = '10px';
+    debugDiv.style.borderRadius = '5px';
+    debugDiv.style.zIndex = '99999';
+    debugDiv.style.maxHeight = '200px';
+    debugDiv.style.overflowY = 'auto';
+    debugDiv.style.pointerEvents = 'auto';
+    
+    let keysText = "🔑 LocalStorage Keys:<br>";
+    for (let i = 0; i < localStorage.length; i++) {
+      keysText += `- ${localStorage.key(i)}<br>`;
+    }
+    debugDiv.innerHTML = keysText;
+    document.body.appendChild(debugDiv);
+  } catch (e) {
+    console.error("Debug show failed:", e);
+  }
 }
 
 // 従来のローカルモードでの初期化
