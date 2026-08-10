@@ -138,6 +138,13 @@ const userFormEl = document.getElementById('user-form');
 
 // 3. 初期化処理
 function init() {
+  // Firebaseの有無に関わらず、まず起動時にローカルの全ユーザーデータを読み込んで復旧させる
+  try {
+    loadData();
+  } catch (e) {
+    console.error("loadData failed in init:", e);
+  }
+
   if (firebaseEnabled) {
     setupAuthObserver();
   } else {
