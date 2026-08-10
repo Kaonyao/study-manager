@@ -481,7 +481,10 @@ function loadCloudData() {
         
         if (data.gameState) {
           if (data.gameState.currentUser) gameState.currentUser = data.gameState.currentUser;
-          if (data.gameState.users) gameState.users = data.gameState.users;
+          if (data.gameState.users && data.gameState.users.length > 0) {
+            const mergedUsers = new Set([...gameState.users, ...data.gameState.users]);
+            gameState.users = Array.from(mergedUsers);
+          }
           if (data.gameState.userProfile) gameState.userProfile = data.gameState.userProfile;
           if (data.gameState.allCompletedDates) gameState.allCompletedDates = data.gameState.allCompletedDates;
           if (data.gameState.weeklyReportMode) gameState.weeklyReportMode = data.gameState.weeklyReportMode;
@@ -724,14 +727,30 @@ function getUserKey(baseKey) {
 
 // データ読み込み (LocalStorage - 互換性維持)
 function loadData() {
-  // ユーザーリストのロード
+  // ユーザーリストのロードと自動復旧
   const savedUsers = storage.getItem('study_rpg_users');
-  if (savedUsers) {
-    gameState.users = JSON.parse(savedUsers);
-  } else {
-    gameState.users = ["ユーザー"];
-    storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
+  let loadedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+  
+  // 【超強力・自動ユーザーリスト復旧エンジン】
+  // ローカルストレージ内の全キーを走査し、study_rpg_u_{名前}_drills が存在するユーザーを
+  // 自動的に検出し、ユーザーリストに強制的に追加して復旧させます。
+  const detectedUsers = new Set(loadedUsers);
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("study_rpg_u_") && key.endsWith("_drills")) {
+      const userName = key.substring("study_rpg_u_".length, key.length - "_drills".length);
+      if (userName && userName !== "ユーザー" && userName !== "ゆうしゃ") {
+        detectedUsers.add(userName);
+      }
+    }
   }
+  
+  // 検出されたユーザーをリストに反映
+  gameState.users = Array.from(detectedUsers);
+  if (gameState.users.length === 0) {
+    gameState.users = ["ゆうしゃ"];
+  }
+  storage.setItem('study_rpg_users', JSON.stringify(gameState.users));
 
   // 現在のアクティブユーザーのロード
   const savedCurrentUser = storage.getItem('study_rpg_current_user');
