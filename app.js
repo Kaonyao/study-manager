@@ -410,8 +410,8 @@ function saveAllDataToCloud() {
 }
 
 // Firebase データのクラウド読み込み（リアルタイム同期対応）
-function loadCloudData() {
-  if (!firebaseEnabled || !currentFirebaseUser) return Promise.resolve();
+async function loadCloudData() {
+  if (!firebaseEnabled || !currentFirebaseUser) return;
   
   // 既存のリスナーがあれば解除
   if (cloudDataUnsubscribe) {
