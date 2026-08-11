@@ -78,6 +78,7 @@ let history = []; // がんばり履歴データ
 let currentCategoryFilter = 'all'; // 現在選択されているカテゴリフィルター
 let cloudDataLoaded = false; // クラウドからのデータロードが完了したかどうかの安全フラグ
 let cloudDataUnsubscribe = null; // クラウド変更監視リスナーの解除用
+let isSyncingFromServer = false; // クラウドからの変更適用中の書き戻しループ防止フラグ
 
 
 // 2. DOM要素の取得
@@ -404,7 +405,7 @@ let saveToCloudTimeout = null;
 
 // Firebase データのクラウド一括保存 (他端末との同期時に並行setによるデータ競合・上書き破壊を防ぐデバウンス処理付き)
 function saveAllDataToCloud() {
-  if (!firebaseEnabled || !currentFirebaseUser) return;
+  if (!firebaseEnabled || !currentFirebaseUser || isSyncingFromServer) return;
   // 【最重要・安全装置】クラウドデータのロードがまだ完了していない場合は、絶対に上書き保存を行わない！
   if (!cloudDataLoaded) {
     console.warn("[Firestore Guard] クラウドデータの読み込みが完了する前に、自動保存による上書きが実行されそうになったためブロックしました。");
@@ -538,9 +539,11 @@ async function loadCloudData() {
     try {
       // onSnapshot リスナーを開始！
       cloudDataUnsubscribe = userDocRef.onSnapshot(doc => {
-      clearTimeout(loadTimeout);
-      // タイムアウト後に遅れてデータが届いた場合でも、正常に同期状態へ復帰させる
-      timeoutFired = false;
+      isSyncingFromServer = true;
+      try {
+        clearTimeout(loadTimeout);
+        // タイムアウト後に遅れてデータが届いた場合でも、正常に同期状態へ復帰させる
+        timeoutFired = false;
 
       if (doc.exists) {
         const data = doc.data();
@@ -721,6 +724,9 @@ async function loadCloudData() {
             updateCloudIndicator();
           });
         }
+      }
+      } finally {
+        isSyncingFromServer = false;
       }
     }, err => {
       console.error("[Firestore] Realtime sync error:", err);
