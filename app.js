@@ -1407,13 +1407,13 @@ function updateCloudIndicator() {
     if (cloudDataLoaded) {
       indicator.style.background = '#e2f0d9';
       indicator.style.color = '#385723';
-      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
+      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail}) [v7-T]</span>`;
       icon.textContent = '☁️';
     } else {
       indicator.style.background = '#fff3bf';
       indicator.style.color = '#f59f00';
-      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
-      icon.textContent = '⌛';
+      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail}) [v7-F]</span>`;
+      icon.textContent = '⏳';
     }
   } else {
     indicator.style.background = '#fce8e6';
