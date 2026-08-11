@@ -410,23 +410,21 @@ function loadCloudData() {
     cloudDataUnsubscribe = null;
   }
 
-  return new Promise(async (resolve, reject) => {
-    const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
-    
-    // ⏰ 3秒のタイムアウト安全装置 (Firestoreが沈黙してロード未完了のまま操作不能になるのを防ぐ)
-    let timeoutFired = false;
-    const loadTimeout = setTimeout(() => {
-      timeoutFired = true;
-      console.warn("[Firestore] Sync timeout reached. Switching to local-active sync mode.");
-      showGameToast("同期接続を待機しています。ローカルデータで操作可能です。☁️", "⚠️");
-      cloudDataLoaded = true;
-      updateCloudIndicator();
-      resolve(); // フリーズを強制突破！
-    }, 3000);
-    
-    // 【超強力フェールセーフ】onSnapshotの接続遅延やオフラインキャッシュの沈黙を回避するため、
-    // まず一回 get() を投げて初期データを即時ロードする！
-    try {
+  const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
+  
+  // ⏰ 3秒のタイムアウト安全装置 (Firestoreが沈黙してロード未完了のまま操作不能になるのを防ぐ)
+  let timeoutFired = false;
+  const loadTimeout = setTimeout(() => {
+    timeoutFired = true;
+    console.warn("[Firestore] Sync timeout reached. Switching to local-active sync mode.");
+    showGameToast("同期接続を待機しています。ローカルデータで操作可能です。☁️", "⚠️");
+    cloudDataLoaded = true;
+    updateCloudIndicator();
+  }, 3000);
+  
+  // 【超強力フェールセーフ】onSnapshotの接続遅延やオフラインキャッシュの沈黙を回避するため、
+  // まず一回 get() を投げて初期データを即時ロードする！
+  try {
       console.log("[Firestore] Fetching initial data via get()...");
       const docSnap = await userDocRef.get();
       if (timeoutFired) return;
@@ -475,8 +473,13 @@ function loadCloudData() {
         }
       }
     } catch (getErr) {
-      console.error("[Firestore] Initial get() failed:", getErr);
-      showGameToast(`初期ロード失敗: ${getErr.message}`, "⚠️");
+      if (!timeoutFired) {
+        clearTimeout(loadTimeout);
+        console.error("[Firestore] Initial get() failed:", getErr);
+        showGameToast(`初期ロード失敗: ${getErr.message}`, "⚠️");
+        cloudDataLoaded = true;
+        updateCloudIndicator();
+      }
     }
 
     // onSnapshot リスナーを開始！
@@ -659,13 +662,11 @@ function loadCloudData() {
         if (!cloudDataLoaded) {
           checkAndMigrateLocalData().then(() => {
             cloudDataLoaded = true;
-            resolve();
+            updateCloudIndicator();
           }).catch(err => {
             cloudDataLoaded = true;
-            resolve();
+            updateCloudIndicator();
           });
-        } else {
-          resolve();
         }
       }
     }, err => {
@@ -674,10 +675,12 @@ function loadCloudData() {
       if (!cloudDataLoaded) {
         startLocalMode();
         cloudDataLoaded = true;
+        updateCloudIndicator();
       }
-      reject(err);
     });
-  });
+  } catch (snapErr) {
+    console.error("[Firestore] Failed to start onSnapshot:", snapErr);
+  }
 }
 
 // 既存のローカルデータのクラウドへの移行（引き継ぎ）- ブロッキングconfirm()やawaitを完全排除して自動で非同期に実行
