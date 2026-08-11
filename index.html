@@ -32,6 +32,38 @@
       }
       return false;
     };
+
+    // 🚨 非同期 Promise 例外（Firestoreなど）も画面に警告表示する
+    window.onunhandledrejection = function(event) {
+      function displayPromiseError() {
+        const reason = event.reason;
+        const message = reason ? (reason.message || reason) : 'Unknown promise rejection';
+        const stack = (reason && reason.stack) ? reason.stack : '';
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.bottom = '10px';
+        errorDiv.style.left = '10px';
+        errorDiv.style.right = '10px';
+        errorDiv.style.background = '#fce8e6';
+        errorDiv.style.color = '#c5221f';
+        errorDiv.style.border = '2px solid #c5221f';
+        errorDiv.style.padding = '12px';
+        errorDiv.style.borderRadius = '8px';
+        errorDiv.style.zIndex = '999999';
+        errorDiv.style.fontFamily = 'monospace';
+        errorDiv.style.fontSize = '12px';
+        errorDiv.style.whiteSpace = 'pre-wrap';
+        errorDiv.innerHTML = '<strong>🚨 非同期（Promise）エラーが発生しました:</strong><br>' + 
+          message + (stack ? '<br><br>スタックトレース:<br>' + stack : '');
+        document.body.appendChild(errorDiv);
+      }
+      if (document.body) {
+        displayPromiseError();
+      } else {
+        window.addEventListener('DOMContentLoaded', displayPromiseError);
+      }
+    };
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -774,6 +806,6 @@
   </script>
 
   <!-- JSの読み込み -->
-  <script src="app.js?v=20260811_v5"></script>
+  <script src="app.js?v=20260811_v6"></script>
 </body>
 </html>

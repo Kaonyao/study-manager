@@ -411,7 +411,12 @@ function saveAllDataToCloud() {
 
 // Firebase データのクラウド読み込み（リアルタイム同期対応）
 async function loadCloudData() {
-  if (!firebaseEnabled || !currentFirebaseUser) return;
+  if (!firebaseEnabled || !currentFirebaseUser || !dbInstance) {
+    console.warn("[Firestore] Firebase/Firestore is disabled or not initialized. Skipping loadCloudData.");
+    cloudDataLoaded = true;
+    updateCloudIndicator();
+    return;
+  }
   
   // 既存のリスナーがあれば解除
   if (cloudDataUnsubscribe) {
