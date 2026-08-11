@@ -296,6 +296,9 @@ function setupAuthObserver() {
       }).catch(err => {
         syncFinished = true;
         console.error("loadCloudData failed during startup sync:", err);
+        // エラー発生時もローカルモードで操作できるように unblock する！
+        cloudDataLoaded = true;
+        updateCloudIndicator();
       });
       
       // アプリ画面の更新 (各処理を個別try-catchで囲み、iPad等でのデータ整合性エラーに巻き込まれるのを防止)
