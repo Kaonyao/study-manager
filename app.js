@@ -391,7 +391,6 @@ function saveAllDataToCloud() {
   // 【最重要・安全装置】クラウドデータのロードがまだ完了していない場合は、絶対に上書き保存を行わない！
   if (!cloudDataLoaded) {
     console.warn("[Firestore Guard] クラウドデータの読み込みが完了する前に、自動保存による上書きが実行されそうになったためブロックしました。");
-    showGameToast("同期エラー: クラウド接続が完了していません (読込中)。もう一度タップしてください", "⚠️");
     return;
   }
 
