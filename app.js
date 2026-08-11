@@ -401,7 +401,6 @@ function saveAllDataToCloud() {
 
   saveToCloudTimeout = setTimeout(async () => {
     try {
-      showGameToast("クラウドへデータを保存中... ☁️", "ℹ️");
       const userDocRef = dbInstance.collection("users").doc(currentFirebaseUser.uid);
       const payload = {
         gameState: {
@@ -421,11 +420,9 @@ function saveAllDataToCloud() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       await userDocRef.set(payload, { merge: true });
-      showGameToast("クラウドへの保存が完了しました！✨", "☁️");
       console.log("[Firestore] Data successfully saved to cloud (debounced).");
     } catch (e) {
       console.error("[Firestore] Save failed:", e);
-      showGameToast(`同期に失敗しました: ${e.message}`, "⚠️");
     }
   }, 300);
 }
@@ -1393,43 +1390,11 @@ function getTodayDateString() {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 }
 
-// ☁️ クラウド同期ステータス表示の更新
+// ☁️ クラウド同期ステータス表示の更新（画面スッキリ化のため非表示に制御）
 function updateCloudIndicator() {
   const indicator = document.getElementById('header-cloud-indicator');
-  const icon = document.getElementById('header-cloud-icon');
-  const text = document.getElementById('header-cloud-text');
-  
-  if (!indicator || !icon || !text) return;
-  
-  if (!firebaseEnabled) {
-    indicator.style.background = '#fce8e6';
-    indicator.style.color = '#c5221f';
-    text.textContent = '同期オフ (ゲスト)';
-    icon.textContent = '⚠️';
-    return;
-  }
-  
-  if (currentFirebaseUser) {
-    const emailStr = currentFirebaseUser.email || "メールなし";
-    const uidStr = currentFirebaseUser.uid || "";
-    const uidTail = uidStr.length >= 4 ? uidStr.substring(uidStr.length - 4) : uidStr;
-    
-    if (cloudDataLoaded) {
-      indicator.style.background = '#e2f0d9';
-      indicator.style.color = '#385723';
-      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
-      icon.textContent = '☁️';
-    } else {
-      indicator.style.background = '#fff3bf';
-      indicator.style.color = '#f59f00';
-      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
-      icon.textContent = '⌛';
-    }
-  } else {
-    indicator.style.background = '#fce8e6';
-    indicator.style.color = '#c5221f';
-    text.textContent = '同期オフ (ログインしてね)';
-    icon.textContent = '⚠️';
+  if (indicator) {
+    indicator.style.display = 'none';
   }
 }
 
