@@ -181,12 +181,21 @@ function init() {
     console.error("Initial local tasks generation failed:", e);
   }
 
-  // 【最重要】すべてのDOM of DOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
-  updateCloudIndicator();
-  if (firebaseEnabled) {
-    setupAuthObserver();
-  } else {
-    // Firebaseが無効な場合は従来通りローカルモードで起動
+  // 【最重要】すべてのDOMのセットアップと初期描画が終わった後に、Firebaseの監視を開始してデータをロードする
+  try {
+    updateCloudIndicator();
+  } catch (e) {
+    console.error("updateCloudIndicator failed in init:", e);
+  }
+
+  try {
+    if (firebaseEnabled) {
+      setupAuthObserver();
+    } else {
+      startLocalMode();
+    }
+  } catch (e) {
+    console.error("Firebase startup failed in init, falling back to local mode:", e);
     startLocalMode();
   }
 }
@@ -885,7 +894,14 @@ function getUserKey(baseKey) {
 function loadData() {
   // ユーザーリストのロードと自動復旧
   const savedUsers = storage.getItem('study_rpg_users');
-  let loadedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+  let loadedUsers = [];
+  try {
+    loadedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+    if (!Array.isArray(loadedUsers)) loadedUsers = [];
+  } catch (e) {
+    console.error("[Storage Parse Error] study_rpg_users:", e);
+    loadedUsers = [];
+  }
   
   // 【超強力・自動ユーザーリスト復旧エンジン】
   // ローカルストレージ内の全キーを走査し、study_rpg_u_{名前}_drills が存在するユーザーを
@@ -926,8 +942,14 @@ function loadData() {
   // ユーザープロファイルのロード
   const savedProfile = storage.getItem(getUserKey('profile'));
   if (savedProfile) {
-    gameState.userProfile = JSON.parse(savedProfile);
-  } else {
+    try {
+      gameState.userProfile = JSON.parse(savedProfile);
+    } catch (e) {
+      console.error("[Storage Parse Error] profile:", e);
+      gameState.userProfile = null;
+    }
+  }
+  if (!gameState.userProfile) {
     gameState.userProfile = {
       name: gameState.currentUser,
       avatar: "default_img"
@@ -938,7 +960,15 @@ function loadData() {
   // ドリルマスタ
   const savedDrills = storage.getItem(getUserKey('drills'));
   if (savedDrills) {
-    drills = JSON.parse(savedDrills);
+    try {
+      drills = JSON.parse(savedDrills);
+      if (!Array.isArray(drills)) drills = null;
+    } catch (e) {
+      console.error("[Storage Parse Error] drills:", e);
+      drills = null;
+    }
+  }
+  if (drills && drills.length > 0) {
     let drillUpdated = false;
     drills.forEach(d => {
       if (!d.category) {
@@ -1042,7 +1072,15 @@ function loadData() {
   // タスクリスト
   const savedTasks = storage.getItem(getUserKey('tasks'));
   if (savedTasks) {
-    tasks = JSON.parse(savedTasks);
+    try {
+      tasks = JSON.parse(savedTasks);
+      if (!Array.isArray(tasks)) tasks = null;
+    } catch (e) {
+      console.error("[Storage Parse Error] tasks:", e);
+      tasks = null;
+    }
+  }
+  if (tasks && tasks.length > 0) {
     let taskUpdated = false;
     const seenTaskKeys = new Set();
     const uniqueTasks = [];
@@ -1100,7 +1138,15 @@ function loadData() {
   // 履歴データ
   const savedHistory = storage.getItem(getUserKey('history'));
   if (savedHistory) {
-    history = JSON.parse(savedHistory);
+    try {
+      history = JSON.parse(savedHistory);
+      if (!Array.isArray(history)) history = null;
+    } catch (e) {
+      console.error("[Storage Parse Error] history:", e);
+      history = null;
+    }
+  }
+  if (history && history.length > 0) {
     let historyUpdated = false;
     history.forEach(h => {
       if (h.taskText && (h.taskText.includes('ぷん') || h.taskText.includes('ふん'))) {
@@ -1124,7 +1170,13 @@ function loadData() {
   // 過去の達成タスク
   const savedCompletedTasks = storage.getItem(getUserKey('completed_tasks'));
   if (savedCompletedTasks) {
-    completedTasks = JSON.parse(savedCompletedTasks);
+    try {
+      completedTasks = JSON.parse(savedCompletedTasks);
+      if (!Array.isArray(completedTasks)) completedTasks = [];
+    } catch (e) {
+      console.error("[Storage Parse Error] completed_tasks:", e);
+      completedTasks = [];
+    }
   } else {
     completedTasks = [];
   }
@@ -1132,7 +1184,13 @@ function loadData() {
   // にがて傾向・写真のロード
   const savedMistakes = storage.getItem(getUserKey('mistake_records'));
   if (savedMistakes) {
-    gameState.mistakeRecords = JSON.parse(savedMistakes);
+    try {
+      gameState.mistakeRecords = JSON.parse(savedMistakes);
+      if (!Array.isArray(gameState.mistakeRecords)) gameState.mistakeRecords = [];
+    } catch (e) {
+      console.error("[Storage Parse Error] mistake_records:", e);
+      gameState.mistakeRecords = [];
+    }
     let updated = false;
     gameState.mistakeRecords.forEach(r => {
       if (!r.status) {
@@ -1150,8 +1208,14 @@ function loadData() {
   // 1週間のスケジュール
   const savedSchedule = storage.getItem(getUserKey('weekly_schedule'));
   if (savedSchedule) {
-    const parsed = JSON.parse(savedSchedule);
-    if (!Array.isArray(parsed)) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(savedSchedule);
+    } catch (e) {
+      console.error("[Storage Parse Error] weekly_schedule:", e);
+      parsed = [];
+    }
+    if (parsed && !Array.isArray(parsed)) {
       // 移行ロジック
       const flatList = [];
       const days = ["月", "火", "水", "木", "金", "土", "日"];
@@ -1202,7 +1266,13 @@ function loadData() {
   // はなまる獲得日（すべて完了した日）のロード
   const savedAllCompleted = storage.getItem(getUserKey('all_completed_dates'));
   if (savedAllCompleted) {
-    gameState.allCompletedDates = JSON.parse(savedAllCompleted);
+    try {
+      gameState.allCompletedDates = JSON.parse(savedAllCompleted);
+      if (!Array.isArray(gameState.allCompletedDates)) gameState.allCompletedDates = [];
+    } catch (e) {
+      console.error("[Storage Parse Error] all_completed_dates:", e);
+      gameState.allCompletedDates = [];
+    }
   } else {
     gameState.allCompletedDates = [];
   }
