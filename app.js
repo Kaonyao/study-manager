@@ -296,6 +296,27 @@ function setupAuthObserver() {
       }).catch(err => {
         syncFinished = true;
         console.error("loadCloudData failed during startup sync:", err);
+        
+        // 🚨 同期エラーの詳細を画面上に赤枠で露出させる
+        const errorDiv = document.createElement('div');
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.bottom = '80px'; // トーストと重ならないように位置調整
+        errorDiv.style.left = '10px';
+        errorDiv.style.right = '10px';
+        errorDiv.style.background = '#fce8e6';
+        errorDiv.style.color = '#c5221f';
+        errorDiv.style.border = '2px solid #c5221f';
+        errorDiv.style.padding = '12px';
+        errorDiv.style.borderRadius = '8px';
+        errorDiv.style.zIndex = '999999';
+        errorDiv.style.fontFamily = 'monospace';
+        errorDiv.style.fontSize = '11px';
+        errorDiv.style.whiteSpace = 'pre-wrap';
+        errorDiv.innerHTML = '<strong>🚨 データベース接続に失敗しました:</strong><br>' + 
+          (err ? (err.message || err) : 'Unknown error') + 
+          (err && err.stack ? '<br><br>スタックトレース:<br>' + err.stack : '');
+        document.body.appendChild(errorDiv);
+
         // エラー発生時もローカルモードで操作できるように unblock する！
         cloudDataLoaded = true;
         updateCloudIndicator();
