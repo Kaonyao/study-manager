@@ -680,12 +680,12 @@ function loadCloudData() {
   });
 }
 
-// 既存のローカルデータのクラウドへの移行（引き継ぎ）- ブロッキングconfirm()を完全排除して自動で非同期に実行
-async function checkAndMigrateLocalData() {
+// 既存のローカルデータのクラウドへの移行（引き継ぎ）- ブロッキングconfirm()やawaitを完全排除して自動で非同期に実行
+function checkAndMigrateLocalData() {
   // ローカルにデータが存在するかチェック
   const hasLocalTasks = storage.getItem(getUserKey('tasks'));
   const hasLocalDrills = storage.getItem(getUserKey('drills'));
-  if (!hasLocalTasks && !hasLocalDrills) return;
+  if (!hasLocalTasks && !hasLocalDrills) return Promise.resolve();
 
   console.log("[Migration] Automatically migrating local data to cloud account (no-blocking)...");
   try {
@@ -709,11 +709,15 @@ async function checkAndMigrateLocalData() {
       mistakeRecords: gameState.mistakeRecords || [],
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    await userDocRef.set(payload, { merge: true });
-    showGameToast("ローカルデータをクラウドに同期しました！☁️", "💮");
+    userDocRef.set(payload, { merge: true }).then(() => {
+      showGameToast("ローカルデータをクラウドに同期しました！☁️", "💮");
+    }).catch(e => {
+      console.error("[Migration] Set failed:", e);
+    });
   } catch (e) {
     console.error("[Migration] Automatic migration failed:", e);
   }
+  return Promise.resolve(); // 呼び出し元へは即座に解決を返し、起動フリーズを防止
 }
 
 // ローカルへのバックアップキャッシュ保存
