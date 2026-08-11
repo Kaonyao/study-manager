@@ -1313,7 +1313,8 @@ function updateCloudIndicator() {
   
   if (currentFirebaseUser) {
     const emailStr = currentFirebaseUser.email || "メールなし";
-    const uidTail = currentFirebaseUser.uid.substring(currentFirebaseUser.uid.length - 4);
+    const uidStr = currentFirebaseUser.uid || "";
+    const uidTail = uidStr.length >= 4 ? uidStr.substring(uidStr.length - 4) : uidStr;
     
     if (cloudDataLoaded) {
       indicator.style.background = '#e2f0d9';
