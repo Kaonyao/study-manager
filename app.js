@@ -299,25 +299,7 @@ function setupAuthObserver() {
         syncFinished = true;
         console.error("loadCloudData failed during startup sync:", err);
         
-        // 🚨 同期エラーの詳細を画面上に赤枠で露出させる
-        const errorDiv = document.createElement('div');
-        errorDiv.style.position = 'fixed';
-        errorDiv.style.bottom = '80px'; // トーストと重ならないように位置調整
-        errorDiv.style.left = '10px';
-        errorDiv.style.right = '10px';
-        errorDiv.style.background = '#fce8e6';
-        errorDiv.style.color = '#c5221f';
-        errorDiv.style.border = '2px solid #c5221f';
-        errorDiv.style.padding = '12px';
-        errorDiv.style.borderRadius = '8px';
-        errorDiv.style.zIndex = '999999';
-        errorDiv.style.fontFamily = 'monospace';
-        errorDiv.style.fontSize = '11px';
-        errorDiv.style.whiteSpace = 'pre-wrap';
-        errorDiv.innerHTML = '<strong>🚨 データベース接続に失敗しました:</strong><br>' + 
-          (err ? (err.message || err) : 'Unknown error') + 
-          (err && err.stack ? '<br><br>スタックトレース:<br>' + err.stack : '');
-        document.body.appendChild(errorDiv);
+
 
         // エラー発生時もローカルモードで操作できるように unblock する！
         cloudDataLoaded = true;
@@ -705,9 +687,7 @@ async function loadCloudData() {
           if (typeof renderCalendar === 'function') {
             renderCalendar();
           }
-          if (cloudDataLoaded) {
-            showGameToast("最新のデータをクラウドから受信しました！☁️", "ℹ️");
-          }
+
         } catch (e) {
           console.error("[Firestore Sync] Error refreshing UI:", e);
           showGameToast(`同期描画エラー: ${e.message}`, "⚠️");
@@ -1437,13 +1417,13 @@ function updateCloudIndicator() {
     if (cloudDataLoaded) {
       indicator.style.background = '#e2f0d9';
       indicator.style.color = '#385723';
-      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail}) [v7-T]</span>`;
+      text.innerHTML = `同期中 <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
       icon.textContent = '☁️';
     } else {
       indicator.style.background = '#fff3bf';
       indicator.style.color = '#f59f00';
-      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail}) [v7-F]</span>`;
-      icon.textContent = '⏳';
+      text.innerHTML = `クラウド読込中... <span style="font-size:0.6rem; opacity:0.8; font-weight:normal;">(${emailStr} / ID:${uidTail})</span>`;
+      icon.textContent = '⌛';
     }
   } else {
     indicator.style.background = '#fce8e6';
