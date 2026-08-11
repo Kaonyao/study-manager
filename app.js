@@ -710,7 +710,6 @@ async function loadCloudData() {
           showGameToast(`同期描画エラー: ${e.message}`, "⚠️");
         }
         
-        resolve();
       } else {
         console.log("[Firestore] No cloud data found.");
         if (!cloudDataLoaded) {
