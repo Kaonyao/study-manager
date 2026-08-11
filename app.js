@@ -279,9 +279,22 @@ function setupAuthObserver() {
 
       // クラウドデータの読み込み (awaitせずバックグラウンドで開始し、起動シーケンスのハングを防ぐ)
       showGameToast("データを同期しています...", "☁️");
+      
+      let syncFinished = false;
+      setTimeout(() => {
+        if (!syncFinished && !cloudDataLoaded) {
+          console.warn("[Startup Sync] Independent timeout fired! Unblocking UI.");
+          showGameToast("同期接続を待機しています。ローカルデータで操作可能です。☁️", "⚠️");
+          cloudDataLoaded = true;
+          updateCloudIndicator();
+        }
+      }, 3000);
+
       loadCloudData().then(() => {
+        syncFinished = true;
         updateCloudIndicator();
       }).catch(err => {
+        syncFinished = true;
         console.error("loadCloudData failed during startup sync:", err);
       });
       
