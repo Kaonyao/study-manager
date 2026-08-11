@@ -77,6 +77,7 @@ let completedTasks = []; // 過去の達成タスク
 let history = []; // がんばり履歴データ
 let currentCategoryFilter = 'all'; // 現在選択されているカテゴリフィルター
 let cloudDataLoaded = false; // クラウドからのデータロードが完了したかどうかの安全フラグ
+let cloudDataUnsubscribe = null; // クラウド変更監視リスナーの解除用
 
 
 // 2. DOM要素の取得
