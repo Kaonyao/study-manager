@@ -1737,6 +1737,7 @@ function generateDailyTasks(isNewDay = false) {
 
   todaySchedules.forEach(schedule => {
     try {
+      const tomorrowDateStr = getTomorrowDateString();
       if (schedule.drillId) {
         const drill = drills.find(d => d.id === schedule.drillId || d.id.toString() === schedule.drillId.toString());
         if (!drill || drill.archived) return;
@@ -1843,7 +1844,6 @@ function generateDailyTasks(isNewDay = false) {
 
       taskText += timingSuffix;
 
-      const tomorrowDateStr = getTomorrowDateString();
       const existIndex = tasks.findIndex(t => 
         t.drillId === drill.id && 
         (t.date === todayDateStr || (t.date === tomorrowDateStr && t.status === 'postponed'))
