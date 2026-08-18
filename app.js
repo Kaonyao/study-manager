@@ -4373,6 +4373,13 @@ function handleAllCorrect() {
   renderTasks();
   showGameToast("タスクを完了しました。💯", "✨");
   closeCheckAnswerModal();
+
+  // ⏰ 3秒後に最終状態をダブルチェック
+  setTimeout(() => {
+    const doubleCheckTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
+    const doubleStatus = doubleCheckTask ? doubleCheckTask.status : '見つかりません';
+    showGameToast(`デバッグ(3秒後): 最終状態 - ${doubleStatus}`, "ℹ️");
+  }, 3000);
 }
 
 // 🚀 まちがいを記録して送信
@@ -4438,6 +4445,13 @@ function handleSubmitMistake(event) {
     showGameToast("間違いをアルバムに記録しました。📷", "📝");
   }
   closeCheckAnswerModal();
+
+  // ⏰ 3秒後に最終状態をダブルチェック
+  setTimeout(() => {
+    const doubleCheckTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
+    const doubleStatus = doubleCheckTask ? doubleCheckTask.status : '見つかりません';
+    showGameToast(`デバッグ(3秒後): 最終状態 - ${doubleStatus}`, "ℹ️");
+  }, 3000);
 }
 
 // デバッグ用の日付シミュレーション関数
