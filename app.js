@@ -1477,7 +1477,7 @@ function repairTodayCompletedTasks() {
       const drillNameStr = matchedDrill ? matchedDrill.name : mistake.drillName;
       const drillIdVal = matchedDrill ? matchedDrill.id : `restored_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
       const categoryVal = matchedDrill ? matchedDrill.category : "べんきょう";
-      const mistakeDate = mistake.date || todayDateStr;
+      const mistakeDate = normalizeDateString(mistake.date || todayDateStr);
 
       const hasCompleted = completedTasks.some(t => 
         (t.text && t.text.includes(drillNameStr)) && 
@@ -1995,7 +1995,7 @@ function addHistoryRecord(task, type = 'custom', actualAmount = null) {
 
   const record = {
     id: task.id,
-    date: task.date || getTodayDateString(),
+    date: normalizeDateString(task.date || getTodayDateString()),
     taskText: task.text,
     type: type,
     amount: amount,
@@ -2006,14 +2006,36 @@ function addHistoryRecord(task, type = 'custom', actualAmount = null) {
   saveHistory();
 }
 
+// 日付フォーマットの正規化ヘルパー (YYYY-MM-DD 形式に統一)
+function normalizeDateString(dateStr) {
+  if (!dateStr) return getTodayDateString();
+  const str = String(dateStr).trim();
+  // "2026/8/18" や "2026/08/18" の場合
+  if (str.indexOf('/') !== -1) {
+    const parts = str.split('/');
+    if (parts.length === 3) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  // "2026-8-18" のように 0 パディングがない場合
+  if (str.indexOf('-') !== -1) {
+    const parts = str.split('-');
+    if (parts.length === 3) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  return str;
+}
+
 function removeHistoryRecord(taskId) {
   history = history.filter(h => h.id !== taskId && h.id.toString() !== taskId.toString());
   saveHistory();
 }
 
 function addCompletedTask(task) {
-  const targetDate = task.date || getTodayDateString();
+  const targetDate = normalizeDateString(task.date || getTodayDateString());
   task.completedDate = targetDate;
+  task.date = targetDate;
   
   completedTasks = completedTasks.filter(t => t.id !== task.id && t.id.toString() !== task.id.toString());
   
@@ -3224,7 +3246,7 @@ function handleImageRemove() {
 function addMistakeRecord(drillName, mistakeText, mistakeType, imageBase64, status = "pending") {
   const record = {
     id: `mistake_${Date.now()}`,
-    date: new Date().toLocaleDateString('ja-JP'),
+    date: getTodayDateString(),
     drillName: drillName,
     mistakeText: mistakeText,
     mistakeType: mistakeType || "その他",
@@ -4768,7 +4790,13 @@ function archiveDrill(id) {
   const drill = drills.find(d => d.id === id || d.id.toString() === id.toString());
   if (drill) {
     drill.archived = true;
-    tasks = tasks.filter(t => t.drillId !== drill.id);
+    tasks = tasks.filter(t => {
+      const isSameDrill = t.drillId !== null && t.drillId !== undefined && t.drillId.toString() === drill.id.toString();
+      if (isSameDrill && t.status !== 'completed') {
+        return false;
+      }
+      return true;
+    });
     saveDrills();
     saveTasks();
     renderTasks();
@@ -4814,7 +4842,13 @@ function checkAndAutoArchiveDrill(drill) {
                         (drill.totalQuestions > 0 && drill.currentQuestionProgress >= drill.totalQuestions);
     if (isCompleted) {
       drill.archived = true;
-      tasks = tasks.filter(t => t.drillId !== drill.id);
+      tasks = tasks.filter(t => {
+        const isSameDrill = t.drillId !== null && t.drillId !== undefined && t.drillId.toString() === drill.id.toString();
+        if (isSameDrill && t.status !== 'completed') {
+          return false;
+        }
+        return true;
+      });
       saveDrills();
       saveTasks();
       
