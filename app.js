@@ -1611,6 +1611,7 @@ function repairTodayCompletedTasks() {
         tasks[existingIndex].status = 'completed';
         repaired = true;
       }
+    }
   });
 
   // 3. 【超強力・全完了実績ベース of ドリル進捗同期エンジン】
