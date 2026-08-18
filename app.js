@@ -1730,10 +1730,10 @@ function repairTodayCompletedTasks() {
   }
 
   if (repaired) {
-    saveTasks();
-    saveDrills();
-    saveCompletedTasks();
-    saveHistory();
+    saveLocalBackup();
+    if (firebaseEnabled && currentFirebaseUser) {
+      saveAllDataToCloud();
+    }
     console.log("[Data Repair] 間違いメモから算数ラボ等の実績・カレンダー・今日のする事を完全復元しました。");
   }
 }
