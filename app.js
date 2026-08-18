@@ -1462,6 +1462,26 @@ function repairTodayCompletedTasks() {
   const todayDateStr = getTodayDateString();
   let repaired = false;
 
+  // 💡 【超強力・過去データの自動日付クレンジング】
+  // 過去の completedTasks / history / mistakeRecords の中にあるすべてのレコードの日付を
+  // ハイフン区切り（YYYY-MM-DD）に強制クレンジングします。
+  if (Array.isArray(completedTasks)) {
+    completedTasks.forEach(t => {
+      if (t.completedDate) t.completedDate = normalizeDateString(t.completedDate);
+      if (t.date) t.date = normalizeDateString(t.date);
+    });
+  }
+  if (Array.isArray(history)) {
+    history.forEach(h => {
+      if (h.date) h.date = normalizeDateString(h.date);
+    });
+  }
+  if (gameState && Array.isArray(gameState.mistakeRecords)) {
+    gameState.mistakeRecords.forEach(m => {
+      if (m.date) m.date = normalizeDateString(m.date);
+    });
+  }
+
   // 【超強力救出エンジン】「にがて（間違い記録）」に存在するが、completedTasks / history から漏れている実績を完全に無条件救出！
   if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
     gameState.mistakeRecords.forEach(mistake => {
@@ -1591,21 +1611,34 @@ function repairTodayCompletedTasks() {
         tasks[existingIndex].status = 'completed';
         repaired = true;
       }
-    }
+  });
 
-    // 3. ドリルタスクの場合は、進捗が戻ってしまっていたら完了実績に合わせて修復
-    if (completedTask.drillId) {
-      const drill = drills.find(d => d.id === completedTask.drillId || d.id.toString() === completedTask.drillId.toString());
-      if (drill) {
-        if (completedTask.endPage > 0 && drill.totalPages > 0) {
-          drill.currentProgress = Math.max(drill.currentProgress || 0, completedTask.endPage);
-        }
-        if (completedTask.endQuestion > 0 && drill.totalQuestions > 0) {
-          drill.currentQuestionProgress = Math.max(drill.currentQuestionProgress || 0, completedTask.endQuestion);
+  // 3. 【超強力・全完了実績ベース of ドリル進捗同期エンジン】
+  // 今日だけでなく、過去のすべての完了実績（completedTasks）をスキャンして、
+  // ドリルマスタの進捗が完了実績の最大進捗に追いつくように強制修復します。
+  if (Array.isArray(completedTasks) && completedTasks.length > 0) {
+    completedTasks.forEach(completedTask => {
+      if (completedTask.drillId) {
+        const drill = drills.find(d => d.id === completedTask.drillId || d.id.toString() === completedTask.drillId.toString());
+        if (drill) {
+          let progressUpdated = false;
+          if (completedTask.endPage > 0 && drill.totalPages > 0 && completedTask.endPage > (drill.currentProgress || 0)) {
+            drill.currentProgress = completedTask.endPage;
+            drill.startPage = Math.min(drill.currentProgress + 1, drill.totalPages + 1);
+            progressUpdated = true;
+          }
+          if (completedTask.endQuestion > 0 && drill.totalQuestions > 0 && completedTask.endQuestion > (drill.currentQuestionProgress || 0)) {
+            drill.currentQuestionProgress = completedTask.endQuestion;
+            drill.startQuestion = Math.min(drill.currentQuestionProgress + 1, drill.totalQuestions + 1);
+            progressUpdated = true;
+          }
+          if (progressUpdated) {
+            repaired = true;
+          }
         }
       }
-    }
-  });
+    });
+  }
 
   // 4. 今日の時間割予定で、今日まだ未完了のまま「削除(deleted)」や「延期(postponed)」に他端末で落とされてしまった予定（ロボ団など）を
   // 時間割に存在する限り「active (未完了)」として強制復元するセルフヒーリング処理
