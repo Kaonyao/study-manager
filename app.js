@@ -1540,7 +1540,7 @@ function repairTodayCompletedTasks() {
 
     // 1. 同名・同ID・同ドリルの未達成（active）タスクが「今日のすること」に紛れ込んでいれば完全排除
     tasks = tasks.filter(t => {
-      const isSameDrill = completedTask.drillId && t.drillId === completedTask.drillId;
+      const isSameDrill = completedTask.drillId !== null && completedTask.drillId !== undefined && t.drillId !== null && t.drillId !== undefined && t.drillId.toString() === completedTask.drillId.toString();
       const isSameId = t.id === completedTask.id;
       const tCleanName = t.text ? t.text.replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, "").trim() : "";
       const isSameName = cleanName && tCleanName && (tCleanName.includes(cleanName) || cleanName.includes(tCleanName));
@@ -1553,7 +1553,7 @@ function repairTodayCompletedTasks() {
 
     // 2. 「今日のすること」に完了済み状態のタスクが存在するかチェック
     const existingIndex = tasks.findIndex(t => 
-      (t.id === completedTask.id || (completedTask.drillId && t.drillId === completedTask.drillId) || (cleanName && t.text && t.text.includes(cleanName))) && 
+      (t.id === completedTask.id || (completedTask.drillId !== null && completedTask.drillId !== undefined && t.drillId !== null && t.drillId !== undefined && t.drillId.toString() === completedTask.drillId.toString()) || (cleanName && t.text && t.text.includes(cleanName))) && 
       t.date === todayDateStr && 
       t.status === 'completed'
     );
@@ -1845,7 +1845,7 @@ function generateDailyTasks(isNewDay = false) {
       taskText += timingSuffix;
 
       const existIndex = tasks.findIndex(t => 
-        t.drillId === drill.id && 
+        t.drillId !== null && t.drillId !== undefined && t.drillId.toString() === drill.id.toString() && 
         (t.date === todayDateStr || (t.date === tomorrowDateStr && t.status === 'postponed'))
       );
       if (existIndex === -1) {
