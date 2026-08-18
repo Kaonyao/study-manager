@@ -2546,6 +2546,20 @@ function renderTasks() {
     taskListEl.appendChild(li);
   });
 
+  // 【超強力・WebKitチェックマークバグ対策】
+  // HTML の checked 属性がブラウザのキャッシュやProperty状態によって無視されるのを防ぐため、
+  // 生成された実際のチェックボックスDOMに対して直接 checked プロパティを書き込みます。
+  const checkboxes = taskListEl.querySelectorAll('.task-checkbox');
+  checkboxes.forEach(cb => {
+    const tId = cb.dataset.id;
+    const t = tasks.find(task => task.id === tId || task.id.toString() === tId);
+    if (t && t.status === 'completed') {
+      cb.checked = true;
+    } else {
+      cb.checked = false;
+    }
+  });
+
   // 進捗率と日付をヘッダーに反映
   updateUI();
 }
@@ -4346,40 +4360,22 @@ function revertDrillTask(task) {
 // 💮 全部合ってた！
 function handleAllCorrect() {
   const task = gameState.currentCheckingTask;
-  if (!task) {
-    showGameToast("デバッグ: taskがnullです！", "⚠️");
-    closeCheckAnswerModal();
-    return;
+  if (task) {
+    const actualInput = document.getElementById('actual-amount-input');
+    const actualAmount = actualInput ? parseInt(actualInput.value, 10) : null;
+
+    task.status = 'completed';
+    completeDrillTask(task, actualAmount);
+    saveTasks();
+    
+    addHistoryRecord(task, 'drill', actualAmount);
+    addCompletedTask(task);
+    saveHistory();
+    
+    renderTasks();
+    showGameToast("タスクを完了しました。💯", "✨");
   }
-  
-  const actualInput = document.getElementById('actual-amount-input');
-  const actualAmount = actualInput ? parseInt(actualInput.value, 10) : null;
-
-  showGameToast(`デバッグ: 完了処理開始 - ID:${task.id}`, "ℹ️");
-
-  task.status = 'completed';
-  completeDrillTask(task, actualAmount);
-  saveTasks();
-  
-  addHistoryRecord(task, 'drill', actualAmount);
-  addCompletedTask(task);
-  saveHistory();
-  
-  // 保存後の状態確認
-  const savedTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
-  const savedStatus = savedTask ? savedTask.status : '見つかりません';
-  showGameToast(`デバッグ: 保存後状態 - ${savedStatus}`, "ℹ️");
-  
-  renderTasks();
-  showGameToast("タスクを完了しました。💯", "✨");
   closeCheckAnswerModal();
-
-  // ⏰ 3秒後に最終状態をダブルチェック
-  setTimeout(() => {
-    const doubleCheckTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
-    const doubleStatus = doubleCheckTask ? doubleCheckTask.status : '見つかりません';
-    showGameToast(`デバッグ(3秒後): 最終状態 - ${doubleStatus}`, "ℹ️");
-  }, 3000);
 }
 
 // 🚀 まちがいを記録して送信
@@ -4388,70 +4384,53 @@ function handleSubmitMistake(event) {
   const task = gameState.currentCheckingTask;
   const mistakeText = mistakeInputEl.value.trim();
   
-  if (!task) {
-    showGameToast("デバッグ: taskがnullです！", "⚠️");
-    closeCheckAnswerModal();
-    return;
-  }
-  
-  const actualInput = document.getElementById('actual-amount-input');
-  const actualAmount = actualInput ? parseInt(actualInput.value, 10) : null;
+  if (task) {
+    const actualInput = document.getElementById('actual-amount-input');
+    const actualAmount = actualInput ? parseInt(actualInput.value, 10) : null;
 
-  showGameToast(`デバッグ: 完了処理開始 - ID:${task.id}`, "ℹ️");
-
-  task.status = 'completed';
-  completeDrillTask(task, actualAmount);
-  saveTasks();
-  
-  addHistoryRecord(task, 'drill', actualAmount);
-  addCompletedTask(task);
-  saveHistory();
-  
-  // 保存後の状態確認
-  const savedTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
-  const savedStatus = savedTask ? savedTask.status : '見つかりません';
-  showGameToast(`デバッグ: 保存後状態 - ${savedStatus}`, "ℹ️");
-  
-  renderTasks();
-  
-  const finalMistakeText = mistakeText || "べんきょう";
-  const drillName = getDrillNameFromTaskText(task.text);
-  
-  let localType = "その他";
-  const text = finalMistakeText.toLowerCase();
-  if (text.includes("たし算") || text.includes("ひき算") || text.includes("くりあがり") || text.includes("くりさがり") || text.includes("算") || text.includes("計算") || text.includes("たす") || text.includes("ひく")) {
-    localType = "計算ミス";
-  } else if (text.includes("漢字") || text.includes("かんじ") || text.includes("書き") || text.includes("はね") || text.includes("はらい")) {
-    localType = "漢字ミス";
-  } else if (text.includes("読み") || text.includes("問題") || text.includes("文章")) {
-    localType = "読み間違い";
-  }
-  
-  const base64Image = gameState.currentCheckingImage;
-  if (base64Image && firebaseEnabled && currentFirebaseUser) {
-    showGameToast("画像をアップロードしています...", "📷");
-    const filename = `mistake_${Date.now()}`;
-    uploadImageToStorage(base64Image, filename).then(uploadedUrl => {
-      const finalUrl = uploadedUrl || base64Image;
-      addMistakeRecord(drillName, finalMistakeText, localType, finalUrl, "pending");
-      showGameToast("間違いをアルバムに記録しました。📷", "📝");
-    }).catch(err => {
-      console.error("Storage upload failed, falling back to Base64:", err);
+    task.status = 'completed';
+    completeDrillTask(task, actualAmount);
+    saveTasks();
+    
+    addHistoryRecord(task, 'drill', actualAmount);
+    addCompletedTask(task);
+    saveHistory();
+    
+    renderTasks();
+    
+    const finalMistakeText = mistakeText || "べんきょう";
+    const drillName = getDrillNameFromTaskText(task.text);
+    
+    let localType = "その他";
+    const text = finalMistakeText.toLowerCase();
+    if (text.includes("たし算") || text.includes("ひき算") || text.includes("くりあがり") || text.includes("くりさがり") || text.includes("算") || text.includes("計算") || text.includes("たす") || text.includes("ひく")) {
+      localType = "計算ミス";
+    } else if (text.includes("漢字") || text.includes("かんじ") || text.includes("書き") || text.includes("はね") || text.includes("はらい")) {
+      localType = "漢字ミス";
+    } else if (text.includes("読み") || text.includes("問題") || text.includes("文章")) {
+      localType = "読み間違い";
+    }
+    
+    // Firebase Storage が有効なら画像をアップロードしてURLを取得
+    const base64Image = gameState.currentCheckingImage;
+    if (base64Image && firebaseEnabled && currentFirebaseUser) {
+      showGameToast("画像をアップロードしています...", "📷");
+      const filename = `mistake_${Date.now()}`;
+      uploadImageToStorage(base64Image, filename).then(uploadedUrl => {
+        const finalUrl = uploadedUrl || base64Image; // 失敗時はBase64フォールバック
+        addMistakeRecord(drillName, finalMistakeText, localType, finalUrl, "pending");
+        showGameToast("間違いをアルバムに記録しました。📷", "📝");
+      }).catch(err => {
+        console.error("Storage upload failed, falling back to Base64:", err);
+        addMistakeRecord(drillName, finalMistakeText, localType, base64Image, "pending");
+        showGameToast("間違いをアルバムに記録しました。📷", "📝");
+      });
+    } else {
       addMistakeRecord(drillName, finalMistakeText, localType, base64Image, "pending");
       showGameToast("間違いをアルバムに記録しました。📷", "📝");
-    });
-  } else {
-    addMistakeRecord(drillName, finalMistakeText, localType, base64Image, "pending");
-    showGameToast("間違いをアルバムに記録しました。📷", "📝");
+    }
   }
   closeCheckAnswerModal();
-
-  // ⏰ 3秒後に最終状態をダブルチェック
-  setTimeout(() => {
-    const doubleCheckTask = tasks.find(t => t.id === task.id || t.id.toString() === task.id.toString());
-    const doubleStatus = doubleCheckTask ? doubleCheckTask.status : '見つかりません';
-    showGameToast(`デバッグ(3秒後): 最終状態 - ${doubleStatus}`, "ℹ️");
-  }, 3000);
 }
 
 // デバッグ用の日付シミュレーション関数
