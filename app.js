@@ -2079,14 +2079,20 @@ function addCompletedTask(task) {
 function removeCompletedTask(task) {
   if (!task) return;
   const taskId = task.id;
-  const todayStr = getTodayDateString();
+  const compareStr = task.completedDate || task.date || (gameState.yesterdayMode ? getYesterdayDateString() : getTodayDateString());
+  const todayStr = normalizeDateString(compareStr);
   
   completedTasks = completedTasks.filter(t => {
-    if (t.id === taskId || t.id.toString() === taskId.toString()) {
+    const tId = String(t.id);
+    const targetId = String(taskId);
+    if (tId === targetId || 
+        (tId.includes('_restored_') && tId.split('_restored_')[0] === targetId) ||
+        (targetId.includes('_restored_') && targetId.split('_restored_')[0] === tId)) {
       return false;
     }
     
-    if (t.completedDate === todayStr) {
+    const tNormalizedDate = normalizeDateString(t.completedDate || t.date);
+    if (tNormalizedDate === todayStr) {
       if (task.drillId !== null && task.drillId !== undefined) {
         if (t.drillId === task.drillId || (t.drillId && t.drillId.toString() === task.drillId.toString())) {
           return false;
@@ -2109,6 +2115,32 @@ function removeCompletedTask(task) {
     }
     return true;
   });
+  
+  // 連動して間違い記録も削除し、ゾンビ復活を防ぐ
+  if (gameState.mistakeRecords && gameState.mistakeRecords.length > 0) {
+    let drillNameStr = "";
+    if (task.drillId !== null && task.drillId !== undefined) {
+      const drill = drills.find(d => d.id === task.drillId || d.id.toString() === task.drillId.toString());
+      if (drill) drillNameStr = drill.name;
+    } else {
+      drillNameStr = getDrillNameFromTaskText(task.text);
+    }
+    
+    if (drillNameStr) {
+      gameState.mistakeRecords = gameState.mistakeRecords.filter(m => {
+        const mNormalizedDate = normalizeDateString(m.date);
+        const isSameDate = mNormalizedDate === todayStr;
+        const isSameDrill = m.drillName === drillNameStr || 
+                            m.drillName.includes(drillNameStr) || 
+                            drillNameStr.includes(m.drillName);
+        if (isSameDate && isSameDrill) {
+          return false;
+        }
+        return true;
+      });
+      storage.setItem(getUserKey('mistake_records'), JSON.stringify(gameState.mistakeRecords));
+    }
+  }
   
   saveCompletedTasks();
 }
@@ -3278,7 +3310,7 @@ function handleImageRemove() {
 function addMistakeRecord(drillName, mistakeText, mistakeType, imageBase64, status = "pending") {
   const record = {
     id: `mistake_${Date.now()}`,
-    date: getTodayDateString(),
+    date: gameState.yesterdayMode ? getYesterdayDateString() : getTodayDateString(),
     drillName: drillName,
     mistakeText: mistakeText,
     mistakeType: mistakeType || "その他",
