@@ -1488,7 +1488,23 @@ function repairTodayCompletedTasks() {
         const emoji = getCategoryEmoji(categoryVal);
         const startP = matchedDrill ? (matchedDrill.startPage || 1) : 1;
         const endP = matchedDrill && matchedDrill.currentProgress > 0 ? matchedDrill.currentProgress : (startP + (matchedDrill ? (matchedDrill.dailyAmount || 1) : 1) - 1);
-        const taskText = `${emoji} ${categoryVal}：${drillNameStr}（P:${startP}〜${endP}）`;
+        
+        let taskText = "";
+        let startQ = 1;
+        let endQ = 1;
+        if (matchedDrill) {
+          if (matchedDrill.type === 'question') {
+            startQ = matchedDrill.startQuestion || 1;
+            endQ = matchedDrill.currentQuestionProgress > 0 ? matchedDrill.currentQuestionProgress : (startQ + (matchedDrill.dailyQuestionAmount || 1) - 1);
+            taskText = `${emoji} ${categoryVal}：${drillNameStr}（Q:${startQ}〜${endQ}）`;
+          } else if (matchedDrill.type === 'time') {
+            taskText = `${emoji} ${categoryVal}：${drillNameStr}（${matchedDrill.duration || 15}分）`;
+          } else {
+            taskText = `${emoji} ${categoryVal}：${drillNameStr}（P:${startP}〜${endP}）`;
+          }
+        } else {
+          taskText = `${emoji} ${categoryVal}：${drillNameStr}（P:${startP}〜${endP}）`;
+        }
 
         const restoredTask = {
           id: `drill_${drillIdVal}_restored_${mistakeDate}`,
@@ -1497,6 +1513,8 @@ function repairTodayCompletedTasks() {
           drillId: drillIdVal,
           startPage: startP,
           endPage: endP,
+          startQuestion: startQ,
+          endQuestion: endQ,
           category: categoryVal,
           description: '',
           date: mistakeDate,
@@ -2027,6 +2045,20 @@ function normalizeDateString(dateStr) {
   return str;
 }
 
+// タスクの救出用IDと元のIDの紐付けを解決して、正しい実績（history）を見つけるヘルパー
+function findHistoryRecordForTask(task) {
+  if (!task) return null;
+  const taskId = String(task.id);
+  let baseId = taskId;
+  if (taskId.includes('_restored_')) {
+    baseId = taskId.split('_restored_')[0];
+  }
+  return history.find(h => {
+    const hId = String(h.id);
+    return hId === baseId || (hId.includes('_restored_') && hId.split('_restored_')[0] === baseId);
+  });
+}
+
 function removeHistoryRecord(taskId) {
   history = history.filter(h => h.id !== taskId && h.id.toString() !== taskId.toString());
   saveHistory();
@@ -2483,7 +2515,7 @@ function renderTasks() {
 
     let goalBadgeHtml = '';
     const isDone = task.status === 'completed';
-    const hist = isDone ? history.find(h => h.id === task.id || h.id.toString() === task.id.toString()) : null;
+    const hist = isDone ? findHistoryRecordForTask(task) : null;
     
     const pageMatch = displayText.match(/(?:（|\()(P:\d+(?:[〜~]\d+)?)(?:）|\))/);
     if (pageMatch) {
@@ -5708,7 +5740,7 @@ function renderDayTasks(dateStr) {
     
     // 【動的実績反映】もしこのタスクに対応する履歴（history）の実績データがあれば、表示用テキストを実績値に書き換える！
     // これにより過去に記録されたタスクや、新規完了したタスクの表示が実績に同期します。
-    const hist = history.find(h => h.id === task.id || h.id.toString() === task.id.toString());
+    const hist = findHistoryRecordForTask(task);
     if (hist && hist.amount > 0 && task.drillId !== null && task.drillId !== undefined) {
       const drill = drills.find(d => d.id === task.drillId);
       if (drill && drill.type !== 'time') {
